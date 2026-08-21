@@ -1,0 +1,24 @@
+# 核心数值与数据依赖
+pandas==2.2.*
+numpy>=1.26,<3
+matplotlib>=3.8
+scipy>=1.11
+pyarrow>=14
+
+# 行情数据源
+akshare>=1.12
+
+# 回测与金融计算（可选，未安装时自动退回内置向量化引擎）
+vectorbt>=0.26
+
+# LLM Agent 编排（可选，未安装时使用内置命令式编排）
+langchain>=0.2
+langchain-openai>=0.1
+crewai>=0.35
+
+# 向量记忆（阶段2使用）
+chromadb>=0.5
+
+# 开发与测试
+pytest>=8.0
+python-dotenv>=1.0

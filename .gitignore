@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest-deps/
+
+# 密钥与本地配置
+.env
+*.key
+*.pem
+
+# 数据与缓存（体积大且可再生成）
+data/cache/
+data/raw/
+data/constituents/*.csv
+data/constituents/*.parquet
+!data/constituents/.gitkeep
+data/*.db
+
+# 报告与图表产物
+reports/output/
+*.png
+*.pdf
+
+# 编辑器/系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 测试临时文件
+.pytest_cache/
+.coverage
+htmlcov/
