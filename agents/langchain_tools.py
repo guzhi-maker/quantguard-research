@@ -61,3 +61,24 @@ def compute_metrics_tool(nav, benchmark_nav=None, risk_free_rate=0.02):
     from tools.performance_tool import compute_metrics
 
     return compute_metrics(nav, benchmark_nav, risk_free_rate=risk_free_rate)
+
+
+@_register("search_memory", "检索历史策略文本记忆，返回最相似的3条方案")
+def search_memory_tool(query, k=3):
+    from memory.text_memory import TextMemoryStore
+
+    return TextMemoryStore().search(query, k=k)
+
+
+@_register("evaluate_factors", "批量检验因子有效性，输出 IC/IC_IR/半衰期/分层收益")
+def evaluate_factors_tool(panel, price_matrix, factor_ids=None):
+    from tools.factor_research_tool import evaluate_factors
+
+    return evaluate_factors(panel, price_matrix, factor_ids=factor_ids).summary
+
+
+@_register("diagnose_strategy", "基于回测指标给出收益/风险/成本/稳定性诊断")
+def diagnose_strategy_tool(metrics, risk_summary=None):
+    from tools.reflection_tool import diagnose_strategy
+
+    return diagnose_strategy(metrics, risk_report=risk_summary)

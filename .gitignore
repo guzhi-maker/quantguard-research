@@ -17,6 +17,8 @@ data/constituents/*.csv
 data/constituents/*.parquet
 !data/constituents/.gitkeep
 data/*.db
+data/memory_text.json
+data/chroma/
 
 # 报告与图表产物
 reports/output/

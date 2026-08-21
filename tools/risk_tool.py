@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 
 from config.settings import RiskConfig
+from tools import factor_tool
 
 
 @dataclass
@@ -130,3 +131,41 @@ def evaluate_backtest(
         report.warnings.extend(sub.warnings)
     report.passed = not report.violations
     return report
+
+
+def compute_sector_exposure(
+    weights: pd.DataFrame,
+    holdings_sector: pd.Series,
+    asof: Optional[pd.Timestamp] = None,
+) -> pd.DataFrame:
+    """计算最近持仓的行业暴露表。"""
+    if weights.empty:
+        return pd.DataFrame(columns=["sector", "weight"])
+    row = weights.loc[asof] if asof is not None and asof in weights.index else weights.iloc[-1]
+    mapped = pd.DataFrame({"weight": row, "sector": holdings_sector.reindex(row.index)})
+    exposure = mapped.groupby("sector")["weight"].sum().dropna().sort_values(ascending=False)
+    return exposure.rename("weight").reset_index()
+
+
+def compute_style_exposure(
+    weights: pd.DataFrame,
+    factor_matrix: pd.DataFrame,
+    factor_id: Optional[str] = None,
+) -> pd.DataFrame:
+    """计算组合在给定因子上的加权暴露（使用最近共同交易日）。
+
+    当前输入为单因子矩阵，因此对全部成分的暴露求和，返回一行。
+    """
+    if weights.empty or factor_matrix.empty:
+        return pd.DataFrame(columns=["factor", "style_name", "exposure"])
+    common_dates = weights.index.intersection(factor_matrix.index)
+    if len(common_dates) == 0:
+        return pd.DataFrame(columns=["factor", "style_name", "exposure"])
+    date = common_dates[-1]
+    latest = weights.loc[date].reindex(factor_matrix.columns).fillna(0.0)
+    exposure = float((latest * factor_matrix.loc[date]).sum())
+    meta = factor_tool.list_factors().set_index("factor_id")
+    style_name = meta.loc[factor_id, "name"] if factor_id in meta.index else "组合因子暴露"
+    return pd.DataFrame(
+        [{"factor": factor_id or "composite", "style_name": style_name, "exposure": exposure}]
+    )

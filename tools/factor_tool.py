@@ -16,8 +16,13 @@ import pandas as pd
 FACTOR_REGISTRY: Dict[str, dict] = {
     "momentum_20": {"name": "20日动量", "type": "technical", "params": {"window": 20}},
     "momentum_60": {"name": "60日动量", "type": "technical", "params": {"window": 60}},
+    "momentum_120": {"name": "120日动量", "type": "technical", "params": {"window": 120}},
+    "reversal_5": {"name": "5日反转", "type": "technical", "params": {"window": 5}},
     "volatility_20": {"name": "20日波动率", "type": "technical", "params": {"window": 20}},
+    "volatility_60": {"name": "60日波动率", "type": "technical", "params": {"window": 60}},
     "turnover": {"name": "换手率", "type": "technical", "params": {}},
+    "volume_ratio_20": {"name": "20日量比", "type": "technical", "params": {"window": 20}},
+    "amount_ratio_20": {"name": "20日成交额比", "type": "technical", "params": {"window": 20}},
     "pe": {"name": "市盈率PE", "type": "value", "params": {}},
     "pb": {"name": "市净率PB", "type": "value", "params": {}},
     "roe": {"name": "净资产收益率ROE", "type": "quality", "params": {}},
@@ -35,6 +40,15 @@ def _close_panel(input_df: pd.DataFrame) -> pd.DataFrame:
     if "close" in input_df.columns:
         return input_df.pivot(index="date", columns="symbol", values="close")
     return input_df.copy()
+
+
+def _field_panel(input_df: pd.DataFrame, field: str) -> pd.DataFrame:
+    """从标准行情面板或宽表统一提取 date x symbol 字段矩阵。"""
+    if isinstance(input_df.index, pd.MultiIndex) and field in input_df.columns:
+        return input_df[field].unstack("symbol")
+    if field in input_df.columns:
+        return input_df.pivot(index="date", columns="symbol", values=field)
+    raise ValueError(f"数据缺少字段 {field}")
 
 
 def momentum(close: pd.Series, window: int = 20) -> pd.Series:
@@ -88,20 +102,20 @@ def point_in_time_financial_factor(
     fin["ann_date"] = pd.to_datetime(fin["ann_date"])
     fin = fin.sort_values(["symbol", "ann_date"])
     dates = pd.DatetimeIndex(asof_dates).normalize()
-    asof_df = pd.DataFrame({"date": dates})
-    asof_df["key"] = 1
-    fin["key"] = 1
-    merged = pd.merge_asof(
-        asof_df.sort_values("date"),
-        fin.sort_values("ann_date"),
-        left_on="date",
-        right_on="ann_date",
-        by="key",
-        direction="backward",
-        allow_exact_matches=True,
-    )
-    merged["symbol"] = merged["symbol"].fillna("").astype(str)
-    result = merged.set_index(["date", "symbol"])[field]
+    frames = []
+    for symbol in fin["symbol"].unique():
+        symbol_fin = fin[fin["symbol"] == symbol].drop(columns=["symbol"])
+        symbol_dates = pd.DataFrame({"date": dates, "symbol": symbol})
+        merged = pd.merge_asof(
+            symbol_dates.sort_values("date"),
+            symbol_fin.sort_values("ann_date"),
+            left_on="date",
+            right_on="ann_date",
+            direction="backward",
+            allow_exact_matches=True,
+        )
+        frames.append(merged)
+    result = pd.concat(frames, ignore_index=True).set_index(["date", "symbol"])[field]
     return result
 
 
@@ -126,10 +140,17 @@ def compute_factor_matrix(
     elif factor.startswith("volatility"):
         raw = close.apply(lambda col: volatility(col, int(config["window"])))
     elif factor == "turnover":
-        if isinstance(panel.index, pd.MultiIndex) and "turnover" in panel.columns:
-            raw = panel["turnover"].unstack("symbol")
-        else:
-            raw = pd.DataFrame(index=close.index, columns=close.columns, dtype=float)
+        raw = _field_panel(panel, "turnover")
+    elif factor == "reversal_5":
+        raw = -close.apply(lambda col: momentum(col, int(config["window"])))
+    elif factor.startswith("volume_ratio"):
+        volume = _field_panel(panel, "volume")
+        window = int(config["window"])
+        raw = volume / volume.rolling(window, min_periods=max(5, window // 2)).mean() - 1.0
+    elif factor.startswith("amount_ratio"):
+        amount = _field_panel(panel, "amount")
+        window = int(config["window"])
+        raw = amount / amount.rolling(window, min_periods=max(5, window // 2)).mean() - 1.0
     elif factor in {"pe", "pb", "roe"}:
         if financials is None:
             raise ValueError(f"{factor} 因子需要提供 financials（含 ann_date）")

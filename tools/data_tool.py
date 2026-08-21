@@ -403,6 +403,39 @@ def clean_panel(
     return panel
 
 
+def get_financials(
+    pool: Union[str, Iterable[str], pd.DataFrame],
+    start_date: DATE_LIKE,
+    end_date: DATE_LIKE,
+    provider: str = "synthetic",
+    fallback_to_synthetic: bool = True,
+) -> pd.DataFrame:
+    """获取标准化财务数据：symbol / ann_date / pe / pb / roe。
+
+    provider=synthetic 生成确定性的季度公告数据，用于离线演示财务因子。
+    AkShare 财务接口可在此扩展，真实数据必须保留 ann_date 做时点对齐。
+    """
+    start, end = _normalize_dates(start_date, end_date)
+    symbols = _normalize_pool(pool)
+    if provider == "synthetic":
+        rows = []
+        quarters = pd.date_range(start, end, freq="QE")
+        for symbol in symbols:
+            for quarter in quarters:
+                rng = _SYNTHETIC_MARKET._rng(symbol, quarter, quarter)
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "ann_date": quarter + pd.Timedelta(days=30),
+                        "pe": float(rng.uniform(8.0, 40.0)),
+                        "pb": float(rng.uniform(0.8, 6.0)),
+                        "roe": float(rng.uniform(0.02, 0.25)),
+                    }
+                )
+        return pd.DataFrame(rows)
+    raise DataSourceError("get_financials 目前仅支持 synthetic provider")
+
+
 def ensure_dirs() -> None:
     for path in (DATA_DIR, CACHE_DIR, CONSTITUENTS_DIR):
         path.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,4 @@
-"""结构化记忆：SQLite 存储策略、回测结果与因子库（阶段2基础）。"""
+"""结构化记忆：SQLite 存储策略、回测结果与因子库（阶段2）。"""
 
 from __future__ import annotations
 
@@ -20,6 +20,14 @@ class StrategyStore:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         return conn
+
+    def _ensure_columns(
+        self, conn: sqlite3.Connection, table: str, columns: dict[str, str]
+    ) -> None:
+        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        for name, ddl in columns.items():
+            if name not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
 
     def _init_schema(self) -> None:
         with self._connect() as conn:
@@ -62,6 +70,18 @@ class StrategyStore:
                 )
                 """
             )
+            self._ensure_columns(
+                conn,
+                "factor_library",
+                {
+                    "ic_win_rate": "REAL",
+                    "in_sample_ic": "REAL",
+                    "out_sample_ic": "REAL",
+                    "monotonicity": "REAL",
+                    "quantile_spread": "REAL",
+                    "updated_at": "TEXT DEFAULT (datetime('now'))",
+                },
+            )
 
     def save_run(
         self,
@@ -99,6 +119,59 @@ class StrategyStore:
             )
             return strategy_id
 
+    def upsert_factor_stats(
+        self,
+        factor_id: str,
+        factor_name: str,
+        factor_type: str,
+        ic_mean: Optional[float],
+        ic_ir: Optional[float],
+        half_life_days: Optional[float],
+        ic_win_rate: Optional[float] = None,
+        in_sample_ic: Optional[float] = None,
+        out_sample_ic: Optional[float] = None,
+        monotonicity: Optional[float] = None,
+        quantile_spread: Optional[float] = None,
+        is_active: int = 1,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO factor_library (
+                    factor_id, factor_name, factor_type, ic_mean, ic_ir,
+                    half_life_days, ic_win_rate, in_sample_ic, out_sample_ic,
+                    monotonicity, quantile_spread, is_active, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                ON CONFLICT(factor_id) DO UPDATE SET
+                    factor_name = excluded.factor_name,
+                    factor_type = excluded.factor_type,
+                    ic_mean = excluded.ic_mean,
+                    ic_ir = excluded.ic_ir,
+                    half_life_days = excluded.half_life_days,
+                    ic_win_rate = excluded.ic_win_rate,
+                    in_sample_ic = excluded.in_sample_ic,
+                    out_sample_ic = excluded.out_sample_ic,
+                    monotonicity = excluded.monotonicity,
+                    quantile_spread = excluded.quantile_spread,
+                    is_active = excluded.is_active,
+                    updated_at = datetime('now')
+                """,
+                (
+                    factor_id,
+                    factor_name,
+                    factor_type,
+                    ic_mean,
+                    ic_ir,
+                    half_life_days,
+                    ic_win_rate,
+                    in_sample_ic,
+                    out_sample_ic,
+                    monotonicity,
+                    quantile_spread,
+                    is_active,
+                ),
+            )
+
     def list_runs(self) -> pd.DataFrame:
         with self._connect() as conn:
             df = pd.read_sql_query(
@@ -134,3 +207,24 @@ class StrategyStore:
         if max_drawdown is not None:
             df = df[df["max_drawdown"] >= -abs(max_drawdown)]
         return df
+
+    def query_factor_library(
+        self,
+        active_only: bool = True,
+        min_abs_ic: Optional[float] = None,
+        sort_by: str = "ic_mean",
+    ) -> pd.DataFrame:
+        where = ["1=1"]
+        params: list = []
+        if active_only:
+            where.append("is_active = 1")
+        if min_abs_ic is not None:
+            where.append("ABS(ic_mean) >= ?")
+            params.append(float(min_abs_ic))
+        sql = (
+            "SELECT * FROM factor_library WHERE "
+            + " AND ".join(where)
+            + f" ORDER BY {sort_by} DESC"
+        )
+        with self._connect() as conn:
+            return pd.read_sql_query(sql, conn, params=params)

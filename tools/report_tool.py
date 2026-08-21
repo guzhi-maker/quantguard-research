@@ -1,4 +1,4 @@
-"""Markdown 研报生成：指标、图表、参数与风险提示一体输出。"""
+"""Markdown 研报生成：指标、图表、参数、风险归因与阶段 2 迭代对比。"""
 
 from __future__ import annotations
 
@@ -21,12 +21,34 @@ def _fmt(value, digits: int = 2, is_pct: bool = True) -> str:
     return f"{value:.{digits}f}"
 
 
+def _md_path(path) -> str:
+    return str(Path(path)).replace("\\", "/")
+
+
+
+
 def _json_scalar(value):
     if isinstance(value, (pd.Series, pd.DataFrame)) or hasattr(value, "to_dict"):
         return None
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return None
     return float(value)
+
+
+def _df_table(df: pd.DataFrame, digits: int = 3) -> str:
+    if df is None or df.empty:
+        return "无数据"
+    lines = ["| " + " | ".join(str(c) for c in df.columns) + " |"]
+    lines.append("|" + "|".join(["---"] * len(df.columns)) + "|")
+    for _, row in df.iterrows():
+        cells = []
+        for value in row:
+            if isinstance(value, float) and value == value:
+                cells.append(f"{value:.{digits}f}")
+            else:
+                cells.append(str(value))
+        lines.append("| " + " | ".join(cells) + " |")
+    return "\n".join(lines)
 
 
 def build_markdown_report(
@@ -38,6 +60,8 @@ def build_markdown_report(
     universe_desc: str = "沪深300 成分股",
     output_dir: str | Path = "reports/output/mvp_demo",
     risk_summary: Optional[str] = None,
+    sector_exposure: Optional[pd.DataFrame] = None,
+    style_exposure: Optional[pd.DataFrame] = None,
 ) -> str:
     """生成标准化研报并保存图表与 Markdown 文件，返回报告路径。"""
     out = Path(output_dir)
@@ -106,21 +130,31 @@ def build_markdown_report(
 | --- | --- |
 {metrics_md}
 
-![净值曲线]({equity_path})
+![净值曲线]({_md_path(equity_path)})
 
-![回撤曲线]({dd_path})
+![回撤曲线]({_md_path(dd_path)})
 
-![月度收益热力图]({monthly_path})
+![月度收益热力图]({_md_path(monthly_path)})
 
-## 5. 风险提示
-
-- 本报告由量化工具自动生成，展示的是历史模拟结果，不代表未来收益。
-- 已包含佣金、印花税、过户费与滑点假设，但未覆盖涨跌停无法成交、停牌等极端情形。
-- 样本外表现、参数敏感性以及行业/风格暴露分析将在阶段 2-3 中补充。
+## 5. 风险归因
 
 **风控意见**：{risk_summary or "风控校验通过"}
 
-## 6. 附录：调仓记录摘要
+### 5.1 行业暴露
+
+{_df_table(sector_exposure) if sector_exposure is not None else "无行业映射数据"}
+
+### 5.2 风格暴露
+
+{_df_table(style_exposure) if style_exposure is not None else "无因子暴露数据"}
+
+## 6. 风险提示
+
+- 本报告由量化工具自动生成，展示的是历史模拟结果，不代表未来收益。
+- 已包含佣金、印花税、过户费与滑点假设，但未覆盖涨跌停无法成交、停牌等极端情形。
+- 策略有效性的最终判断需结合样本外表现与参数敏感性分析。
+
+## 7. 附录：调仓记录摘要
 
 ```text
 调仓次数: {len(result.trades)} 笔
@@ -136,4 +170,76 @@ def build_markdown_report(
             ensure_ascii=False,
             indent=2,
         )
+    return str(report_path)
+
+
+def build_iteration_report(
+    base: dict,
+    variants: list[dict],
+    best: dict,
+    diagnostics: list,
+    output_dir: str | Path = "reports/output/stage2",
+    strategy_name: str = "策略迭代优化",
+    heatmap_table: Optional[pd.DataFrame] = None,
+    heatmap_path: Optional[str] = None,
+) -> str:
+    """生成“初始回测 -> 问题诊断 -> 自动优化 -> 对比报告”的 Markdown 文档。"""
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    lines = [f"# {strategy_name}", ""]
+    lines.append("## 1. 初始策略诊断")
+    lines.append("")
+    if diagnostics:
+        for diag in diagnostics:
+            lines.append(
+                f"- **[{diag.dimension} / {diag.severity}]** {diag.issue}："
+                f"{diag.suggestion}"
+            )
+    else:
+        lines.append("- 未发现显著问题。")
+    lines.append("")
+
+    lines.append("## 2. 参数敏感性分析")
+    lines.append("")
+    if heatmap_path:
+        lines.append(f"![参数敏感性]({_md_path(heatmap_path)})")
+    else:
+        lines.append("无参数敏感性数据。")
+    lines.append("")
+
+    lines.append("## 3. 方案对比")
+    lines.append("")
+    lines.append("| 方案 | 因子 | 参数 | top_n | 调仓 | 年化收益 | 夏普 | 最大回撤 | 年化换手 | 风控 |")
+    lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    for item in [base, *variants]:
+        m = item["metrics"]
+        params = item.get("params", {})
+        risk_summary = item.get("risk_report", None)
+        risk_text = risk_summary.summary() if hasattr(risk_summary, "summary") else str(risk_summary)
+        lines.append(
+            f"| {item['name']} | {item.get('factor', '-')} | {params} | "
+            f"{item.get('top_n', '-')} | {item.get('rebalance_freq', '-')} | "
+            f"{_fmt(m.get('annual_return'))} | {_fmt(m.get('sharpe_ratio'), is_pct=False)} | "
+            f"{_fmt(m.get('max_drawdown'))} | {_fmt(m.get('annual_turnover'))} | {risk_text} |"
+        )
+    lines.append("")
+
+    lines.append("## 4. 最优方案")
+    lines.append("")
+    best_m = best["metrics"]
+    lines.append(
+        f"- **方案**: {best.get('name')}\n"
+        f"- **因子/参数**: {best.get('factor')} {best.get('params')}\n"
+        f"- **年化收益**: {_fmt(best_m.get('annual_return'))}\n"
+        f"- **夏普**: {_fmt(best_m.get('sharpe_ratio'), is_pct=False)}\n"
+        f"- **最大回撤**: {_fmt(best_m.get('max_drawdown'))}\n"
+        f"- **年化换手**: {_fmt(best_m.get('annual_turnover'))}\n"
+    )
+    if best.get("report_path"):
+        lines.append(f"- **最优方案研报**: {_md_path(best['report_path'])}")
+    lines.append("")
+
+    report_path = out / "iteration_report.md"
+    report_path.write_text("\n".join(lines), encoding="utf-8")
     return str(report_path)
