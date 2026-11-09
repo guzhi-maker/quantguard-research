@@ -13,6 +13,8 @@ venv/
 # 数据与缓存（体积大且可再生成）
 data/cache/
 data/raw/
+data/curated/
+data/processed/
 data/constituents/*.csv
 data/constituents/*.parquet
 !data/constituents/.gitkeep
@@ -22,6 +24,7 @@ data/chroma/
 
 # 报告与图表产物
 reports/output/
+exports/
 *.png
 *.pdf
 
@@ -35,3 +38,4 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+server*.log

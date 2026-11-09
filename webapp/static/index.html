@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="QuantGuard 数据挖掘与机器学习量化研究终端">
+  <meta name="color-scheme" content="light">
+  <title>QuantGuard 机器学习量化研究台</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5.2 8.2A2.5 2.5 0 0 0 6.9 21h10.2a2.5 2.5 0 0 0 2.1-3.8L14 9V3"></path><path d="M7.5 15h9"></path></symbol>
+    <symbol id="i-pie" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9v9h9Z"></path><path d="M15 3a9 9 0 0 1 6 6h-6V3Z"></path></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><path d="M4 7h16v13H4zM3 3h18v4H3zM9 11h6"></path></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.6-3.6"></path></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"></path></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"></path></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path><path d="m9 12 2 2 4-5"></path></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2.8 20h18.4L12 3Z"></path><path d="M12 9v5M12 17h.01"></path></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"></path></symbol>
+    <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"></path></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"></path></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"></path></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4h7a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H4V4ZM20 4h-5v16a3 3 0 0 1 3-3h2V4Z"></path></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 7h-7V4M4 17h7v3"></path><path d="M5.5 9A8 8 0 0 1 19 7M18.5 15A8 8 0 0 1 5 17"></path></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview" aria-label="QuantGuard 研究总览">
+        <span class="brand-mark" aria-hidden="true">QG</span>
+        <span class="brand-copy">
+          <strong>QuantGuard</strong>
+          <small>QUANT RESEARCH DESK</small>
+        </span>
+      </a>
+
+      <nav class="primary-nav" aria-label="主要导航">
+        <a class="nav-link is-active" href="#overview"><svg class="icon" aria-hidden="true"><use href="#i-dashboard"></use></svg><span>研究总览</span></a>
+        <a class="nav-link" href="#research"><svg class="icon" aria-hidden="true"><use href="#i-flask"></use></svg><span>数据与模型</span></a>
+        <a class="nav-link" href="#portfolio"><svg class="icon" aria-hidden="true"><use href="#i-pie"></use></svg><span>组合执行</span></a>
+        <a class="nav-link" href="#archive"><svg class="icon" aria-hidden="true"><use href="#i-archive"></use></svg><span>研究档案</span></a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="source-state">
+          <span class="status-dot" id="sourceDot" aria-hidden="true"></span>
+          <span>
+            <strong id="sourceLabel">实时行情待请求</strong>
+            <small id="sidebarSourceDetail">公开证券行情 · 日线</small>
+          </span>
+        </div>
+        <p class="sidebar-note">用于课程研究和个人研究，不连接券商，不构成投资建议或收益承诺。</p>
+        <button class="sidebar-tour-button" id="tourOpenButton" type="button">
+          <svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg>
+          <span>五步展示</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="workspace" id="main-content">
+      <header class="workspace-header">
+        <div class="title-block">
+          <p class="eyebrow">DATA MINING / MACHINE LEARNING / A-SHARE</p>
+          <h1>机器学习量化研究台</h1>
+          <p class="subtitle">从行情审计、特征与标签，到时间外验证、成本回测和可执行组合。</p>
+        </div>
+        <div class="header-status">
+          <div class="mode-switch" aria-label="当前数据模式">
+            <span class="mode-button is-active" data-mode="live" role="status">实时行情</span>
+          </div>
+          <div class="run-status" id="runStatus" data-state="idle">
+            <span class="run-status-dot" aria-hidden="true"></span>
+            <span id="runStatusText">等待运行</span>
+          </div>
+          <div class="asof-block">
+            <span>行情截面</span>
+            <strong id="headerAsOf">--</strong>
+          </div>
+        </div>
+      </header>
+
+      <div class="notice-bar" id="globalNotice" role="status" aria-live="polite" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-alert"></use></svg>
+        <span id="noticeText"></span>
+        <button class="icon-button" id="noticeClose" type="button" aria-label="关闭提示" title="关闭提示">
+          <svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg>
+        </button>
+      </div>
+
+      <section class="market-tape-section" aria-labelledby="marketTapeTitle">
+        <header class="market-tape-heading">
+          <div>
+            <span class="section-index">LIVE MARKET / SNAPSHOT</span>
+            <h2 id="marketTapeTitle">实时行情截面</h2>
+          </div>
+          <div class="market-tape-meta">
+            <span class="live-chip">LIVE</span>
+            <span id="liveMarketTime">正在连接公开行情接口</span>
+          </div>
+        </header>
+        <div class="table-shell market-tape-shell">
+          <table class="data-table market-tape-table">
+            <thead><tr><th>代码</th><th>股票</th><th>最新价</th><th>涨跌幅</th><th>成交额</th><th>换手率</th></tr></thead>
+            <tbody id="liveMarketBody"><tr><td colspan="6" class="table-empty">正在抓取最新公开行情...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="control-band" aria-labelledby="controlTitle">
+        <div class="control-heading">
+          <div>
+            <span class="section-index">EXPERIMENT CONTROLS / 01</span>
+            <h2 id="controlTitle">实验参数</h2>
+          </div>
+          <span class="control-note">默认使用实时公开行情，并自动切换可用数据源</span>
+        </div>
+        <form class="parameter-grid" id="researchForm">
+          <label class="field">
+            <span>研究资金</span>
+            <span class="input-with-unit"><input id="capitalInput" type="number" min="0.1" max="50000000" step="0.1" value="5" inputmode="decimal"><em>万元</em></span>
+          </label>
+          <label class="field">
+            <span>股票池上限</span>
+            <span class="input-with-unit"><input id="universeInput" type="number" min="10" max="200" step="10" value="80" inputmode="numeric"><em>只</em></span>
+          </label>
+          <label class="field">
+            <span>历史窗口</span>
+            <span class="input-with-unit"><input id="daysInput" type="number" min="180" max="1000" step="20" value="500" inputmode="numeric"><em>日</em></span>
+          </label>
+          <label class="field">
+            <span>目标持仓</span>
+            <span class="input-with-unit"><input id="topNInput" type="number" min="3" max="20" step="1" value="8" inputmode="numeric"><em>只</em></span>
+          </label>
+          <label class="field">
+            <span>标签期限</span>
+            <select id="horizonSelect">
+              <option value="5">未来 5 日超额</option>
+              <option value="10">未来 10 日超额</option>
+              <option value="20" selected>未来 20 日超额</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>候选模型</span>
+            <select id="modelSelect">
+              <option value="auto" selected>自动选择</option>
+              <option value="factor">多因子基线</option>
+              <option value="ridge">Ridge 回归</option>
+              <option value="random_forest">随机森林</option>
+              <option value="gradient_boosting">梯度提升</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>调仓频率</span>
+            <select id="rebalanceSelect">
+              <option value="monthly" selected>月末</option>
+              <option value="weekly">周末</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>清仓窗口</span>
+            <span class="input-with-unit"><input id="exitDaysInput" type="number" min="1" max="20" step="1" value="5" inputmode="numeric"><em>日</em></span>
+          </label>
+          <label class="field">
+            <span>ADV 参与率</span>
+            <span class="input-with-unit"><input id="participationInput" type="number" min="1" max="30" step="1" value="5" inputmode="decimal"><em>%</em></span>
+          </label>
+          <label class="field">
+            <span>行业上限</span>
+            <span class="input-with-unit"><input id="industryCapInput" type="number" min="10" max="50" step="1" value="22" inputmode="decimal"><em>%</em></span>
+          </label>
+          <label class="field">
+            <span>每月投入</span>
+            <span class="input-with-unit"><input id="contributionInput" type="number" min="0" max="100000" step="100" value="2000" inputmode="decimal"><em>元</em></span>
+          </label>
+          <label class="field">
+            <span>积累情景</span>
+            <span class="input-with-unit"><input id="yearsInput" type="number" min="1" max="10" step="1" value="3" inputmode="numeric"><em>年</em></span>
+          </label>
+          <div class="run-control">
+            <button class="button button-primary" id="runButton" type="submit">
+              <svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg>
+              <span>运行完整研究</span>
+            </button>
+            <span class="run-hint" id="runHint">联网抓取最新行情，通常约 1–2 分钟</span>
+          </div>
+        </form>
+      </section>
+
+      <section class="page-section overview-section" id="overview" aria-labelledby="overviewTitle">
+        <header class="section-heading">
+          <div>
+            <span class="section-index">RESEARCH OVERVIEW / 02</span>
+            <h2 id="overviewTitle">先判断证据，再讨论收益</h2>
+          </div>
+          <span class="section-badge" id="experimentBadge">实验待生成</span>
+        </header>
+
+        <div class="question-strip">
+          <span class="question-label">研究问题</span>
+          <p id="researchQuestion">机器学习模型能否预测未来 20 个交易日的横截面相对收益，并在计入 A 股交易约束后形成正的样本外净超额？</p>
+        </div>
+
+        <div class="verdict-strip" id="researchVerdict" data-tone="pending">
+          <div class="verdict-icon"><svg class="icon" aria-hidden="true"><use href="#i-shield"></use></svg></div>
+          <div>
+            <span class="verdict-kicker">样本外结论</span>
+            <strong id="verdictTitle">等待实验结果</strong>
+            <p id="verdictText">应用会分别展示验证期与留出期，不以验证期改善替代样本外证据。</p>
+          </div>
+          <span class="verdict-tag" id="verdictTag">待检验</span>
+        </div>
+
+        <div class="metric-grid" aria-label="核心研究指标">
+          <div class="metric-cell"><span>留出期 Rank IC</span><strong id="metricHoldoutIc">--</strong><small>预测排序与未来超额的相关性</small></div>
+          <div class="metric-cell"><span>留出期净超额</span><strong id="metricHoldoutExcess">--</strong><small>扣除成本后相对等权股票池</small></div>
+          <div class="metric-cell"><span>年化成本拖累</span><strong id="metricCostDrag">--</strong><small>佣金、税费、滑点与冲击</small></div>
+          <div class="metric-cell"><span>最大回撤</span><strong id="metricDrawdown">--</strong><small>全样本净值峰谷</small></div>
+          <div class="metric-cell"><span>有效标签样本</span><strong id="metricRows">--</strong><small>日期 × 股票，且标签窗口已完成</small></div>
+          <div class="metric-cell"><span>1× 容量占用</span><strong id="metricCapacity">--</strong><small>ADV 与清仓窗口约束</small></div>
+        </div>
+
+        <div class="overview-grid">
+          <article class="analysis-block">
+            <header class="block-heading">
+              <div><span>MODEL DECISION</span><h3>本次选择</h3></div>
+              <span class="tiny-badge" id="autoSelectionBadge">--</span>
+            </header>
+            <dl class="readout-list">
+              <div><dt>选定模型</dt><dd id="selectedModelLabel">--</dd></div>
+              <div><dt>选择依据</dt><dd id="selectionReason">--</dd></div>
+              <div><dt>开发期</dt><dd id="developmentWindow">--</dd></div>
+              <div><dt>留出期</dt><dd id="holdoutWindow">--</dd></div>
+              <div><dt>滚动训练</dt><dd id="rollingProtocol">--</dd></div>
+              <div><dt>最新预测日</dt><dd id="predictionDate">--</dd></div>
+            </dl>
+          </article>
+
+          <article class="analysis-block performance-block">
+            <header class="block-heading">
+              <div><span>PERFORMANCE / NET</span><h3>分阶段绩效</h3></div>
+              <span class="tiny-badge" id="performanceBadge">等待结果</span>
+            </header>
+            <div class="table-shell">
+              <table class="data-table">
+                <thead><tr><th>阶段</th><th>毛年化</th><th>净年化</th><th>基准</th><th>净超额</th><th>回撤</th></tr></thead>
+                <tbody id="performanceBody"><tr><td colspan="6" class="table-empty">运行后显示全样本、开发期与留出期绩效</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div class="overview-grid overview-grid-secondary">
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>VALIDATION / HYPOTHESIS</span><h3>模型是否留下可复制证据</h3></div></header>
+            <div class="evidence-row">
+              <div><span>验证期 IC</span><strong id="validationIc">--</strong></div>
+              <div><span>留出期 IC</span><strong id="holdoutIc">--</strong></div>
+              <div><span>Top-20% 捕获</span><strong id="topCapture">--</strong></div>
+              <div><span>留出期 R²</span><strong id="holdoutR2">--</strong></div>
+            </div>
+            <p class="small-note" id="evidenceNote">Rank IC 衡量横截面排序能力；样本外为负时，不应把回测净值作为策略结论。</p>
+          </article>
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>RISK / EXECUTION</span><h3>首要行动</h3></div></header>
+            <ol class="compact-actions" id="overviewActions">
+              <li><span class="action-index">01</span><p>运行研究后生成组合约束行动。</p></li>
+            </ol>
+            <a class="text-link" href="#portfolio">查看完整组合执行 <svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></a>
+          </article>
+        </div>
+      </section>
+
+      <section class="page-section research-section" id="research" aria-labelledby="researchTitle">
+        <header class="section-heading">
+          <div>
+            <span class="section-index">DATA & MODELS / 03</span>
+            <h2 id="researchTitle">研究链路</h2>
+          </div>
+          <span class="section-badge" id="researchSourceBadge">实时行情 · 待运行</span>
+        </header>
+
+        <div class="tab-list" role="tablist" aria-label="研究与模型分区">
+          <button class="tab-button is-active" type="button" role="tab" aria-selected="true" data-tab="audit">数据审计</button>
+          <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="features">特征工程</button>
+          <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="samples">样本与标签</button>
+          <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="training">模型训练</button>
+          <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="backtest">样本外回测</button>
+        </div>
+
+        <div class="tab-panel is-active" role="tabpanel" data-panel="audit">
+          <div class="metric-grid metric-grid-compact">
+            <div class="metric-cell"><span>有效股票</span><strong id="qualityLoaded">--</strong><small id="qualityRequested">请求 --</small></div>
+            <div class="metric-cell"><span>交易日</span><strong id="qualityDates">--</strong><small id="qualityDateRange">--</small></div>
+            <div class="metric-cell"><span>重复记录</span><strong id="qualityDuplicate">--</strong><small>按日期与代码去重</small></div>
+            <div class="metric-cell"><span>非法价格</span><strong id="qualityInvalid">--</strong><small>进入特征前剔除</small></div>
+            <div class="metric-cell"><span>前向填充</span><strong id="qualityFilled">--</strong><small>最长 5 个交易日</small></div>
+            <div class="metric-cell"><span>缺失收盘价</span><strong id="qualityMissing">--</strong><small>完成后仍缺失的比例</small></div>
+          </div>
+
+          <div class="research-grid research-grid-wide-left">
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>LINEAGE / CLEANING</span><h3>数据血缘与清洗记录</h3></div><span class="tiny-badge" id="qualityModeBadge">--</span></header>
+              <dl class="readout-list">
+                <div><dt>来源</dt><dd id="dataSourceDetail">--</dd></div>
+                <div><dt>口径</dt><dd id="dataAdjustment">公开日行情；行业分类取当前可得快照</dd></div>
+                <div><dt>行情截止</dt><dd id="dataMarketDate">--</dd></div>
+                <div><dt>数据快照</dt><dd id="dataSnapshotVersion">公开证券行情</dd></div>
+                <div><dt>短历史排除</dt><dd id="excludedShortHistory">--</dd></div>
+                <div><dt>失败股票</dt><dd id="failedSymbols">--</dd></div>
+              </dl>
+              <ol class="rule-list" id="cleaningRules"><li>运行后显示可复核的清洗规则。</li></ol>
+            </article>
+
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>DISTRIBUTION / INDUSTRY</span><h3>股票池行业结构</h3></div></header>
+              <div class="bar-list" id="industryAuditBars"><p class="empty-copy">运行后显示行业分布。</p></div>
+            </article>
+          </div>
+
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>MISSINGNESS / FIELD AUDIT</span><h3>字段与特征缺失</h3></div></header>
+            <div class="table-shell">
+              <table class="data-table">
+                <thead><tr><th>字段</th><th>缺失率</th><th>处理</th><th>状态</th></tr></thead>
+                <tbody id="qualityTableBody"><tr><td colspan="4" class="table-empty">等待数据审计</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="analysis-block dataset-workbench-block">
+            <header class="block-heading">
+              <div><span>FULL DATA / LINEAGE</span><h3>本次实验使用的完整数据</h3></div>
+              <div class="heading-actions dataset-download-actions">
+                <button class="button button-secondary button-small" id="datasetRawDownload" type="button" disabled>
+                  <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>原始行情 CSV</span>
+                </button>
+                <button class="button button-secondary button-small" id="datasetModelDownload" type="button" disabled>
+                  <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>建模样本 CSV</span>
+                </button>
+              </div>
+            </header>
+
+            <div class="dataset-meta" aria-label="完整数据摘要">
+              <div><span>数据底稿 ID</span><strong id="datasetWorkbenchId">--</strong></div>
+              <div><span>实验 ID</span><strong id="datasetExperimentId">--</strong></div>
+              <div><span>原始行情</span><strong id="datasetRawRows">--</strong></div>
+              <div><span>建模样本</span><strong id="datasetModelRows">--</strong></div>
+              <div><span>日期范围</span><strong id="datasetDateSpan">--</strong></div>
+              <div><span>股票数</span><strong id="datasetSymbolCount">--</strong></div>
+            </div>
+
+            <div class="dataset-view-switch" role="group" aria-label="选择完整数据视图">
+              <button class="is-active" type="button" data-dataset-view="raw" aria-pressed="true">原始行情面板</button>
+              <button type="button" data-dataset-view="model" aria-pressed="false">建模样本矩阵</button>
+            </div>
+
+            <form class="dataset-filter-form" id="datasetFilterForm">
+              <label class="dataset-filter-field is-search">
+                <span>代码 / 名称 / 行业</span>
+                <input id="datasetQuery" type="search" maxlength="50" autocomplete="off" placeholder="例如 600519 或 银行">
+              </label>
+              <label class="dataset-filter-field">
+                <span>开始日期</span>
+                <input id="datasetDateFrom" type="date">
+              </label>
+              <label class="dataset-filter-field">
+                <span>结束日期</span>
+                <input id="datasetDateTo" type="date">
+              </label>
+              <div class="dataset-filter-actions">
+                <button class="button button-primary button-small" id="datasetApplyFilter" type="submit">筛选</button>
+                <button class="button button-secondary button-small" id="datasetResetFilter" type="reset">重置</button>
+              </div>
+            </form>
+
+            <p class="dataset-safety-note">建模样本中的 future_excess 与 label_end_date 仅用于监督学习目标和样本外评估，不会进入特征矩阵。原始行情下载不受当前筛选条件影响。</p>
+            <p class="dataset-status" id="datasetStatus" role="status" aria-live="polite">运行研究后载入完整数据。</p>
+
+            <div class="table-shell dataset-table-shell">
+              <table class="data-table dataset-table" aria-describedby="datasetStatus">
+                <thead id="datasetHead"><tr><th>等待实验</th></tr></thead>
+                <tbody id="datasetBody"><tr><td class="table-empty">运行研究后可按页查看原始行情与建模样本。</td></tr></tbody>
+              </table>
+            </div>
+
+            <footer class="dataset-pagination">
+              <span id="datasetPageInfo">第 0 / 0 页 · 每页 50 行</span>
+              <div class="dataset-page-actions">
+                <button class="button button-secondary button-small" id="datasetPreviousPage" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg><span>上一页</span></button>
+                <button class="button button-secondary button-small" id="datasetNextPage" type="button" disabled><span>下一页</span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+              </div>
+            </footer>
+          </article>
+        </div>
+
+        <div class="tab-panel" role="tabpanel" data-panel="features" hidden>
+          <div class="two-column-copy">
+            <div>
+              <span class="section-index">FEATURE CONTRACT</span>
+              <h3>只使用信号日 t 及之前的行情</h3>
+            </div>
+            <p>连续特征在当日截面做 Z-Score 并截断到 ±3；缺失值由训练折中位数填充，行业编码只在训练折拟合。特征重要性和系数只描述当前样本，不代表因果。</p>
+          </div>
+
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>FEATURE CATALOG</span><h3>17 个入模特征</h3></div><span class="tiny-badge">时点安全</span></header>
+            <div class="table-shell table-shell-tall">
+              <table class="data-table feature-table">
+                <thead><tr><th>特征</th><th>分组</th><th>定义</th><th>缺失率</th></tr></thead>
+                <tbody id="featureCatalogBody"><tr><td colspan="4" class="table-empty">等待实验</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <div class="research-grid">
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>EDA / MISSING</span><h3>缺失率最高特征</h3></div><span class="tiny-badge" id="correlationDate">--</span></header>
+              <div class="bar-list" id="featureMissingBars"><p class="empty-copy">等待探索性分析。</p></div>
+            </article>
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>EDA / CORRELATION</span><h3>截面 Spearman 高相关对</h3></div></header>
+              <div class="table-shell">
+                <table class="data-table">
+                  <thead><tr><th>特征对</th><th>相关系数</th></tr></thead>
+                  <tbody id="correlationBody"><tr><td colspan="2" class="table-empty">等待探索性分析</td></tr></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="tab-panel" role="tabpanel" data-panel="samples" hidden>
+          <article class="analysis-block label-formula-block">
+            <header class="block-heading"><div><span>LABEL / FUTURE EXCESS</span><h3>预测目标</h3></div><span class="tiny-badge" id="labelHorizonBadge">20 日</span></header>
+            <code id="labelFormula">future_excess = close[t+h] / close[t] - 1 - 当日股票池等权未来收益</code>
+            <p>标签只有在其未来窗口结束后才进入训练。20 日标签彼此重叠，会降低有效独立样本数，因此报告同时给出日期数和股票数。</p>
+          </article>
+
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>TIME SPLIT / NO SHUFFLE</span><h3>开发期与留出期</h3></div><span class="tiny-badge">留出期不参与调参</span></header>
+            <div class="split-timeline">
+              <div class="split-segment is-development" id="developmentSegment"><span>开发期 60%</span><strong id="splitDevelopmentText">--</strong></div>
+              <div class="split-segment is-holdout" id="holdoutSegment"><span>留出期 40%</span><strong id="splitHoldoutText">--</strong></div>
+            </div>
+            <div class="sample-count-row">
+              <div><span>开发期样本</span><strong id="sampleRowsDevelopment">--</strong></div>
+              <div><span>留出期样本</span><strong id="sampleRowsHoldout">--</strong></div>
+              <div><span>开发期验证折</span><strong id="foldCount">--</strong></div>
+              <div><span>滚动训练协议</span><strong id="retrainProtocol">--</strong></div>
+            </div>
+          </article>
+
+          <div class="research-grid">
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>EDA / LABEL</span><h3>标签分布</h3></div></header>
+              <dl class="readout-list" id="labelDistribution"></dl>
+            </article>
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>EDA / REGIME</span><h3>市场状态分组</h3></div></header>
+              <div class="table-shell">
+                <table class="data-table">
+                  <thead><tr><th>环境</th><th>样本</th><th>未来超额均值</th></tr></thead>
+                  <tbody id="marketGroupBody"><tr><td colspan="3" class="table-empty">等待探索性分析</td></tr></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div class="research-grid">
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>TRAINING FOLDS</span><h3>时间验证折</h3></div></header>
+              <div class="table-shell">
+                <table class="data-table">
+                  <thead><tr><th>折</th><th>训练标签截止</th><th>验证区间</th><th>训练行</th><th>验证行</th></tr></thead>
+                  <tbody id="foldBody"><tr><td colspan="5" class="table-empty">等待训练</td></tr></tbody>
+                </table>
+              </div>
+            </article>
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>LEAKAGE CHECKS</span><h3>防泄漏清单</h3></div></header>
+              <ul class="check-list" id="leakageList"><li>等待实验。</li></ul>
+            </article>
+          </div>
+        </div>
+
+        <div class="tab-panel" role="tabpanel" data-panel="training" hidden>
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>MODEL COMPARISON</span><h3>基线、Ridge、随机森林与梯度提升</h3></div><span class="tiny-badge" id="modelSelectedBadge">--</span></header>
+            <div class="table-shell">
+              <table class="data-table">
+                <thead><tr><th>模型</th><th>状态</th><th>验证 IC</th><th>留出 IC</th><th>留出 R²</th><th>Top-20% 捕获</th><th>结论</th></tr></thead>
+                <tbody id="modelComparisonBody"><tr><td colspan="7" class="table-empty">等待实验</td></tr></tbody>
+              </table>
+            </div>
+            <p class="small-note">自动选择遵循开发期三个连续验证折的 Rank IC 与 R² 约束；若监督模型未优于因子基线，报告会保留基线，不根据留出期重新选择。</p>
+          </article>
+
+          <div class="research-grid">
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>SELECTED / HYPERPARAMETERS</span><h3>冻结参数</h3></div></header>
+              <dl class="readout-list" id="hyperparameterList"><div><dt>模型</dt><dd>--</dd></div></dl>
+            </article>
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>EXPLAIN / IMPORTANCE</span><h3>特征重要性或标准化系数</h3></div><span class="tiny-badge" id="importanceModel">--</span></header>
+              <div class="bar-list" id="importanceBars"><p class="empty-copy">因子基线不产生监督特征重要性。</p></div>
+            </article>
+          </div>
+
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>ROLLING FITS</span><h3>留出期滚动训练日志</h3></div><span class="tiny-badge" id="fitCountBadge">0 次</span></header>
+            <div class="table-shell table-shell-tall">
+              <table class="data-table">
+                <thead><tr><th>信号日</th><th>训练起点</th><th>训练终点</th><th>标签截止</th><th>训练行</th><th>预测行</th></tr></thead>
+                <tbody id="rollingFitsBody"><tr><td colspan="6" class="table-empty">因子基线使用固定打分，无监督重训。</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+
+        <div class="tab-panel" role="tabpanel" data-panel="backtest" hidden>
+          <article class="analysis-block chart-block">
+            <header class="block-heading">
+              <div><span>OUT-OF-SAMPLE / NAV</span><h3>净收益、毛收益影子与等权股票池</h3></div>
+              <div class="legend"><span><i class="legend-line strategy"></i>净策略</span><span><i class="legend-line benchmark"></i>等权基准</span><span><i class="legend-band"></i>留出期</span></div>
+            </header>
+            <div class="chart-shell" id="navChartShell">
+              <svg class="nav-chart" id="navChart" viewBox="0 0 900 300" role="img" aria-label="策略净值曲线"></svg>
+              <div class="chart-tooltip" id="navTooltip" hidden><span id="tooltipDate"></span><strong id="tooltipValue"></strong></div>
+              <div class="chart-empty" id="chartEmpty">运行后显示净值曲线</div>
+            </div>
+            <div class="chart-footer"><span id="chartStart">--</span><span id="chartEnd">--</span><span id="chartAriaText">--</span></div>
+          </article>
+
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>RETURN BRIDGE</span><h3>收益、成本与超额</h3></div></header>
+            <div class="table-shell">
+              <table class="data-table">
+                <thead><tr><th>阶段</th><th>毛年化</th><th>成本拖累</th><th>净年化</th><th>基准</th><th>净超额</th><th>夏普</th><th>换手</th></tr></thead>
+                <tbody id="backtestPeriodBody"><tr><td colspan="8" class="table-empty">等待回测</td></tr></tbody>
+              </table>
+            </div>
+          </article>
+
+          <div class="research-grid">
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>COST / BREAKDOWN</span><h3>全样本交易成本</h3></div><span class="tiny-badge" id="costTotalBadge">--</span></header>
+              <div class="table-shell">
+                <table class="data-table">
+                  <thead><tr><th>成本项</th><th>金额</th><th>占初始资金</th></tr></thead>
+                  <tbody id="costBody"><tr><td colspan="3" class="table-empty">等待回测</td></tr></tbody>
+                </table>
+              </div>
+            </article>
+            <article class="analysis-block">
+              <header class="block-heading"><div><span>STRESS / CAPACITY</span><h3>资金规模压力</h3></div><span class="tiny-badge" id="capacityBadge">--</span></header>
+              <div class="table-shell">
+                <table class="data-table">
+                  <thead><tr><th>资金倍率</th><th>资金</th><th>仓位</th><th>容量占用</th></tr></thead>
+                  <tbody id="stressBody"><tr><td colspan="4" class="table-empty">等待回测</td></tr></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="page-section portfolio-section" id="portfolio" aria-labelledby="portfolioTitle">
+        <header class="section-heading">
+          <div>
+            <span class="section-index">PORTFOLIO EXECUTION / 04</span>
+            <h2 id="portfolioTitle">把预测分数变成可执行的整手组合</h2>
+          </div>
+          <span class="section-badge" id="portfolioCapitalBadge">资金 --</span>
+        </header>
+
+        <div class="metric-grid metric-grid-compact">
+          <div class="metric-cell"><span>目标仓位</span><strong id="portfolioInvested">--</strong><small>整手取整后的实际权重</small></div>
+          <div class="metric-cell"><span>现金权重</span><strong id="portfolioCash">--</strong><small>整手缺口与主动现金</small></div>
+          <div class="metric-cell"><span>建仓成本</span><strong id="portfolioBuildCost">--</strong><small id="portfolioBuildCostBps">--</small></div>
+          <div class="metric-cell"><span>最低佣金增量</span><strong id="portfolioMinimumCommission">--</strong><small>小资金订单的额外摩擦</small></div>
+          <div class="metric-cell"><span>最长退出</span><strong id="portfolioExitDays">--</strong><small>按 ADV 参与率估算</small></div>
+          <div class="metric-cell"><span>行业上限</span><strong id="portfolioIndustryCap">--</strong><small>目标权重约束</small></div>
+        </div>
+
+        <article class="analysis-block">
+          <header class="block-heading">
+            <div><span>TARGET / WHOLE LOTS</span><h3>模型目标持仓</h3></div>
+            <div class="heading-actions">
+              <button class="button button-secondary button-small" id="syncTargetButton" type="button" disabled>
+                <svg class="icon" aria-hidden="true"><use href="#i-sync"></use></svg><span>同步到观察组合</span>
+              </button>
+            </div>
+          </header>
+          <div class="table-shell">
+            <table class="data-table holdings-table">
+              <thead><tr><th>#</th><th>股票</th><th>行业</th><th>预测分</th><th>目标权重</th><th>价格</th><th>股数</th><th>实际金额</th><th>退出</th><th>冲击</th></tr></thead>
+              <tbody id="portfolioHoldingsBody"><tr><td colspan="10" class="table-empty">运行后显示目标组合</td></tr></tbody>
+            </table>
+          </div>
+        </article>
+
+        <div class="research-grid research-grid-wide-left">
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>RISK ACTIONS</span><h3>优先处理项</h3></div><span class="tiny-badge" id="riskActionCount">0 项</span></header>
+            <div class="action-list" id="portfolioRiskActions"><p class="empty-copy">运行研究后生成组合约束行动。</p></div>
+          </article>
+          <article class="analysis-block">
+            <header class="block-heading"><div><span>EXPOSURE / CAPACITY</span><h3>行业暴露与容量</h3></div></header>
+            <div class="bar-list" id="industryExposureBars"><p class="empty-copy">等待组合构建。</p></div>
+            <dl class="readout-list readout-list-compact">
+              <div><dt>估算组合容量</dt><dd id="capacityLimit">--</dd></div>
+              <div><dt>剩余扩规模</dt><dd id="capacityHeadroom">--</dd></div>
+              <div><dt>日均执行金额</dt><dd id="executionDaily">--</dd></div>
+              <div><dt>最大单票日单</dt><dd id="executionLargest">--</dd></div>
+            </dl>
+          </article>
+        </div>
+
+        <article class="analysis-block watchlist-block">
+          <header class="block-heading">
+            <div><span>MANUAL REVIEW</span><h3>观察组合与独立风控复核</h3></div>
+            <span class="tiny-badge" id="watchlistStatus">0 只</span>
+          </header>
+          <div class="watchlist-toolbar">
+            <form class="search-form" id="stockSearchForm" role="search">
+              <label class="search-field" for="stockSearch">
+                <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+                <input id="stockSearch" type="search" autocomplete="off" placeholder="输入代码或名称，例如 600519 / 贵州茅台" aria-describedby="searchHint">
+                <button class="search-submit" type="submit" title="搜索并加入观察组合" aria-label="搜索并加入观察组合"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg></button>
+              </label>
+              <div class="suggestions" id="searchSuggestions" role="listbox" aria-label="股票搜索结果" hidden></div>
+            </form>
+            <button class="button button-secondary" id="clearWatchlistButton" type="button">清空</button>
+            <button class="button button-primary" id="analyzeRiskButton" type="button" disabled>
+              <svg class="icon" aria-hidden="true"><use href="#i-shield"></use></svg><span>独立风控复核</span>
+            </button>
+          </div>
+          <p class="field-hint" id="searchHint">搜索结果与风控请求都会使用公开实时行情；观察组合保存在本机。</p>
+          <div class="table-shell">
+            <table class="data-table watchlist-table">
+              <thead><tr><th>股票</th><th>行业</th><th>最新价</th><th>20 日收益</th><th>60 日波动</th><th>权重</th><th>整手金额</th><th>操作</th></tr></thead>
+              <tbody id="watchlistBody"><tr><td colspan="8" class="table-empty">添加股票后可直接编辑权重并复核风险。</td></tr></tbody>
+            </table>
+          </div>
+          <div class="risk-review-result" id="riskReviewResult">
+            <span class="section-index">INDEPENDENT RISK REVIEW</span>
+            <h3>尚未执行组合风控</h3>
+            <p>目标组合与研究回测相互独立；这里用于检查手工观察组合的集中度、行业暴露、回撤和相关性。</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="page-section archive-section" id="archive" aria-labelledby="archiveTitle">
+        <header class="section-heading">
+          <div>
+            <span class="section-index">RESEARCH ARCHIVE / 05</span>
+            <h2 id="archiveTitle">让结论可复核，也让失败结果留下来</h2>
+          </div>
+          <div class="heading-actions">
+            <button class="button button-secondary" id="openTourButton" type="button"><svg class="icon" aria-hidden="true"><use href="#i-book"></use></svg><span>五步展示</span></button>
+            <button class="button button-primary" id="exportMarkdownButton" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>导出 Markdown</span></button>
+            <button class="button button-secondary" id="exportJsonButton" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>导出 JSON</span></button>
+          </div>
+        </header>
+
+        <div class="archive-ledger">
+          <div class="ledger-cell"><span>实验编号</span><strong id="archiveExperimentId">--</strong></div>
+          <div class="ledger-cell"><span>选定模型</span><strong id="archiveModel">--</strong></div>
+          <div class="ledger-cell"><span>留出期 IC</span><strong id="archiveHoldoutIc">--</strong></div>
+          <div class="ledger-cell"><span>净超额</span><strong id="archiveExcess">--</strong></div>
+          <div class="ledger-cell"><span>数据模式</span><strong id="archiveMode">--</strong></div>
+          <div class="ledger-cell"><span>生成时间</span><strong id="archiveGeneratedAt">--</strong></div>
+        </div>
+
+        <div class="archive-grid">
+          <article class="analysis-block report-outline">
+            <header class="block-heading"><div><span>COURSE REPORT</span><h3>报告结构</h3></div><span class="tiny-badge">可直接导出</span></header>
+            <ol class="report-outline-list">
+              <li><span>01</span><div><strong>研究问题与假设</strong><p id="archiveQuestion">等待实验。</p></div></li>
+              <li><span>02</span><div><strong>数据来源、清洗与血缘</strong><p id="archiveData">等待实验。</p></div></li>
+              <li><span>03</span><div><strong>特征工程与标签定义</strong><p id="archiveFeatures">等待实验。</p></div></li>
+              <li><span>04</span><div><strong>时间切分与防泄漏</strong><p id="archiveSplit">等待实验。</p></div></li>
+              <li><span>05</span><div><strong>模型选择与样本外证据</strong><p id="archiveModels">等待实验。</p></div></li>
+              <li><span>06</span><div><strong>组合、成本、风险与局限</strong><p id="archiveConclusion">等待实验。</p></div></li>
+            </ol>
+          </article>
+
+          <article class="analysis-block experiment-history-block">
+            <header class="block-heading"><div><span>LOCAL HISTORY</span><h3>最近 6 次实验</h3></div><span class="tiny-badge" id="historyCount">0 / 6</span></header>
+            <div class="history-list" id="experimentHistory"><p class="empty-copy">每次运行会保存摘要与参数，可重新载入后复算。</p></div>
+          </article>
+        </div>
+
+        <article class="analysis-block limitations-block">
+          <header class="block-heading"><div><span>LIMITATIONS</span><h3>研究边界与下一步验证</h3></div></header>
+          <ul class="limitation-list" id="limitationsList">
+            <li>当前股票池按当前流动性筛选，存在幸存者偏差。</li>
+            <li>20 日标签窗口重叠会降低样本独立性。</li>
+            <li>小资金整手、冲击成本与真实成交之间仍可能有差异。</li>
+          </ul>
+          <p class="disclaimer" id="disclaimerText">仅用于课程研究和个人研究，不构成投资建议或收益承诺。</p>
+        </article>
+      </section>
+
+      <footer class="page-footer">
+        <span>QuantGuard / 数据挖掘与机器学习量化研究</span>
+        <span id="footerSource">行情来自公开证券数据接口，可能存在延迟；历史结果不代表未来收益。</span>
+      </footer>
+    </main>
+  </div>
+
+  <div class="tour-overlay" id="tourOverlay" hidden>
+    <div class="tour-backdrop" data-tour-close></div>
+    <aside class="tour-panel" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+      <header class="tour-heading">
+        <div><span id="tourStepLabel">STEP 1 / 5</span><h2 id="tourTitle">研究问题</h2></div>
+        <button class="icon-button" type="button" data-tour-close aria-label="关闭展示导览" title="关闭展示导览"><svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg></button>
+      </header>
+      <div class="tour-progress" aria-hidden="true"><span id="tourProgressBar"></span></div>
+      <p id="tourBody">先说明可检验假设，再展示数据、模型、样本外证据与执行风险。</p>
+      <div class="tour-points" id="tourPoints"></div>
+      <footer class="tour-actions">
+        <button class="button button-secondary" id="tourPreviousButton" type="button"><svg class="icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg><span>上一步</span></button>
+        <button class="button button-primary" id="tourNextButton" type="button"><span>下一步</span><svg class="icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg></button>
+      </footer>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

@@ -1,0 +1,56 @@
+name: 小组任务
+description: 为三位成员创建边界清晰、可验收的开发任务
+title: "[A/B/C] "
+labels:
+  - team-task
+body:
+  - type: dropdown
+    id: owner
+    attributes:
+      label: 负责人
+      options:
+        - A 数据获取与智能体
+        - B 数据治理与科研表达
+        - C 机器学习与组合风控
+  - type: dropdown
+    id: workstream
+    attributes:
+      label: 工作流
+      options:
+        - 数据采集
+        - 数据治理
+        - 机器学习
+        - 组合风控
+        - 前端应用
+        - PPT 与答辩
+        - 文档与基础设施
+  - type: textarea
+    id: goal
+    attributes:
+      label: 任务目标
+      description: 说明完成后用户或研究者能看到什么结果
+      placeholder: 例如：新增 500 个交易日的数据采集，并输出来源和缺失率清单。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 写出可以客观检查的条件
+      placeholder: |
+        - 新命令可以重复执行
+        - 有来源、时间、行数和测试
+        - 不提交密钥和原始大文件
+    validations:
+      required: true
+  - type: textarea
+    id: interface
+    attributes:
+      label: 交接接口
+      description: 会修改哪些字段、文件、API 或实验产物
+      placeholder: 不改变现有接口 / 新增字段 / 需要另两位成员同步修改
+  - type: textarea
+    id: risks
+    attributes:
+      label: 风险与依赖
+      description: 网络、数据源限制、密钥、等待其他成员等内容

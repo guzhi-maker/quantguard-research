@@ -4,6 +4,7 @@
   python main.py demo --provider synthetic --factor momentum_20
   python main.py stage2 --factor momentum_20
   python main.py research --factors momentum_20,momentum_60
+  python main.py web --port 8787
   python main.py repl
 """
 
@@ -173,6 +174,13 @@ def cmd_research(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_web(args: argparse.Namespace) -> int:
+    from webapp.server import serve
+
+    serve(host=args.host, port=args.port)
+    return 0
+
+
 def cmd_repl() -> int:
     print("量化投研 Agent (命令式交互)")
     print("输入 help 查看命令，exit 退出。")
@@ -299,6 +307,10 @@ def main(argv=None) -> int:
 
     sub.add_parser("repl", help="命令式交互模式")
 
+    web = sub.add_parser("web", help="启动股票组合风控 Web 工作台")
+    web.add_argument("--host", default="127.0.0.1", help="监听地址，默认仅本机")
+    web.add_argument("--port", type=int, default=8787, help="监听端口")
+
     args = parser.parse_args(argv)
     if args.command == "demo":
         return cmd_demo(args)
@@ -308,6 +320,8 @@ def main(argv=None) -> int:
         return cmd_research(args)
     if args.command == "repl":
         return cmd_repl()
+    if args.command == "web":
+        return cmd_web(args)
     parser.print_help()
     return 0
 
