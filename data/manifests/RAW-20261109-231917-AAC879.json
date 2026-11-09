@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "run_id": "RAW-20261109-231917-AAC879",
+  "created_at": "2026-11-09T23:19:17+08:00",
+  "status": "complete",
+  "request": {
+    "universe_size": 10,
+    "history_days": 120,
+    "include_quotes": true,
+    "symbols": [
+      "600519",
+      "300750"
+    ],
+    "query": "智能风控：重新采集并核对股票行情",
+    "source_policy": "auto: 东方财富优先，腾讯与新浪按接口回退"
+  },
+  "agent": {
+    "provider": "risk-bot",
+    "model": "deepseek-chat"
+  },
+  "summary": {
+    "symbols": 2,
+    "requested_symbols": 2,
+    "daily_rows": 240,
+    "quote_rows": 2,
+    "failures": 0,
+    "date_min": "2026-05-15",
+    "date_max": "2026-11-09",
+    "sources": [
+      "东方财富前复权日行情"
+    ]
+  },
+  "quality": {
+    "symbol_count": 2,
+    "quote_symbol_count": 2,
+    "duplicate_keys": 0,
+    "invalid_price_rows": 0,
+    "missing_close": 0,
+    "missing_amount": 0,
+    "missing_volume": 0,
+    "date_min": "2026-05-15",
+    "date_max": "2026-11-09",
+    "rows_by_source": {
+      "东方财富前复权日行情": 240
+    },
+    "rows_by_adjustment": {
+      "qfq": 240
+    },
+    "symbols_missing_quotes": []
+  },
+  "failures": [],
+  "files": {
+    "daily": {
+      "path": "data/raw/RAW-20261109-231917-AAC879/market_daily.csv",
+      "filename": "market_daily.csv",
+      "rows": 240,
+      "bytes": 41557,
+      "sha256": "f9054050abac6ef1ce0a73dac6c7b6c8f541190ce7e467b165139906c7519878",
+      "columns": [
+        "date",
+        "symbol",
+        "name",
+        "industry",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "amount",
+        "amplitude",
+        "change_pct",
+        "change",
+        "turnover",
+        "source",
+        "adjustment",
+        "fetched_at"
+      ]
+    },
+    "quotes": {
+      "path": "data/raw/RAW-20261109-231917-AAC879/market_quotes.csv",
+      "filename": "market_quotes.csv",
+      "rows": 2,
+      "bytes": 587,
+      "sha256": "3c3d0694a847c8602602d854f9e6785d87ceea519673722883b89bc3c4284774",
+      "columns": [
+        "symbol",
+        "name",
+        "industry",
+        "price",
+        "open",
+        "high",
+        "low",
+        "prev_close",
+        "change",
+        "change_pct",
+        "turnover_rate",
+        "pe",
+        "pb",
+        "volume",
+        "amount",
+        "market_cap",
+        "float_market_cap",
+        "source",
+        "updated_at",
+        "fetched_at"
+      ]
+    },
+    "universe": {
+      "path": "data/raw/RAW-20261109-231917-AAC879/universe.csv",
+      "filename": "universe.csv",
+      "rows": 2,
+      "bytes": 264,
+      "sha256": "1d7b1ad4c8a0cc59c776f45263fea6b463bc1000de7cb5b0235395e58f9f2c39",
+      "columns": [
+        "symbol",
+        "name",
+        "industry",
+        "price",
+        "change_pct",
+        "volume",
+        "amount",
+        "turnover_rate",
+        "pe",
+        "market_cap",
+        "source",
+        "fetched_at"
+      ]
+    }
+  },
+  "lineage": [
+    {
+      "source": "东方财富前复权日行情",
+      "rows": 240,
+      "adjustment": [
+        "qfq"
+      ]
+    }
+  ],
+  "limitations": [
+    "股票池来自抓取时点的公开流动性快照，不是历史时点成分股。",
+    "公开接口可能延迟、限流或临时调整字段，失败记录保留在 failures 中。",
+    "腾讯和新浪的成交额可能由成交量与收盘价估算，具体以每行 source 为准。",
+    "原始数据未做后续研究清洗，缺失值、停牌和异常值需由数据治理环节复核。"
+  ],
+  "trace": [
+    {
+      "time": "2026-11-09T23:19:16+08:00",
+      "event": "universe",
+      "message": "开始确定股票池"
+    },
+    {
+      "time": "2026-11-09T23:19:16+08:00",
+      "event": "universe",
+      "message": "使用指定股票池: 2 只"
+    },
+    {
+      "time": "2026-11-09T23:19:16+08:00",
+      "event": "fetch",
+      "message": "抓取 600519 历史行情",
+      "current": 0,
+      "total": 2,
+      "percent": 0
+    },
+    {
+      "time": "2026-11-09T23:19:16+08:00",
+      "event": "fetch",
+      "message": "600519 完成: 120 行",
+      "current": 1,
+      "total": 2,
+      "percent": 50
+    },
+    {
+      "time": "2026-11-09T23:19:16+08:00",
+      "event": "fetch",
+      "message": "抓取 300750 历史行情",
+      "current": 1,
+      "total": 2,
+      "percent": 50
+    },
+    {
+      "time": "2026-11-09T23:19:17+08:00",
+      "event": "fetch",
+      "message": "300750 完成: 120 行",
+      "current": 2,
+      "total": 2,
+      "percent": 100
+    }
+  ]
+}

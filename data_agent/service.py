@@ -375,13 +375,21 @@ class CollectorService:
         try:
             request = CollectionRequest.from_payload(payload)
             mode = str(payload.get("mode") or "agent").lower()
-            if mode not in {"agent", "fixed"}:
-                raise ValueError("采集模式只能是 agent 或 fixed")
+            if mode not in {"agent", "fixed", "risk"}:
+                raise ValueError("任务模式只能是 agent、fixed 或 risk")
 
             def emit(event: str, message: str, **extra: Any) -> None:
                 self._append_event(job_id, event, message, **extra)
 
-            if mode == "agent":
+            if mode == "risk":
+                from data_agent.risk_service import RiskAnalysisService
+
+                risk_service = getattr(self, "risk_service", None) or RiskAnalysisService(
+                    collector=self
+                )
+                self.risk_service = risk_service
+                result = risk_service.analyze(request, emit=emit)
+            elif mode == "agent":
                 factory = self.agent_factory
                 if factory is None:
                     from data_agent.agent import DeepSeekAgent, DeepSeekClient

@@ -16,6 +16,7 @@ SEARCH_URL = "https://searchapi.eastmoney.com/api/suggest/get"
 MARKET_LIST_URL = "https://push2.eastmoney.com/api/qt/clist/get"
 SINA_MARKET_URL = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeData"
 TENCENT_QUOTE_URL = "https://qt.gtimg.cn/q="
+SINA_QUOTE_URL = "https://hq.sinajs.cn/list="
 TENCENT_HISTORY_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
 SINA_HISTORY_URL = "https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData"
 SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8"
@@ -350,12 +351,119 @@ def _get_eastmoney_quote(symbol: str) -> dict:
     }
 
 
+def _get_sina_quote(symbol: str) -> dict:
+    code = normalize_symbol(symbol)
+    sina_code = _tencent_code(code)
+    payload = _cached(
+        f"sina-quote:{code}",
+        ttl=15,
+        loader=lambda: _fetch_text_gb18030(
+            f"{SINA_QUOTE_URL}{sina_code}",
+            referer="https://finance.sina.com.cn/",
+        ),
+    )
+    marker = f'var hq_str_{sina_code}="'
+    start = payload.find(marker)
+    if start < 0:
+        raise MarketDataError(f"新浪财经未返回股票 {code} 的行情")
+    start += len(marker)
+    end = payload.find('"', start)
+    fields = payload[start:end].split(",")
+    if len(fields) < 32:
+        raise MarketDataError(f"新浪财经行情字段不完整: {code}")
+    price = _number(fields[3])
+    prev_close = _number(fields[2])
+    if not price or price <= 0:
+        raise MarketDataError(f"新浪财经未返回股票 {code} 的有效现价")
+    return {
+        "symbol": code,
+        "name": _clean_name(fields[0], code),
+        "price": price,
+        "open": _number(fields[1]),
+        "high": _number(fields[4]),
+        "low": _number(fields[5]),
+        "prev_close": prev_close,
+        "change": round(price - prev_close, 4) if prev_close else None,
+        "change_pct": (
+            round(price / prev_close - 1.0, 6) if prev_close else None
+        ),
+        "turnover_rate": None,
+        "pe": None,
+        "pb": None,
+        "volume": _number(fields[8]),
+        "amount": _number(fields[9]),
+        "market_cap": None,
+        "float_market_cap": None,
+        "industry": "A股",
+        "source": "新浪财经公开行情",
+        "updated_at": f"{fields[30]} {fields[31]}",
+    }
+
+
 def get_quote(symbol: str) -> dict:
     """Load a live quote, falling back to Tencent when Eastmoney is unavailable."""
     try:
         return _get_eastmoney_quote(symbol)
     except MarketDataError:
         return _get_tencent_quote(symbol)
+
+
+def get_quote_comparison(symbol: str) -> dict:
+    """Fetch two independent quotes and compare the latest prices."""
+    code = normalize_symbol(symbol)
+    sources = []
+    for source_id, loader in (
+        ("eastmoney", _get_eastmoney_quote),
+        ("tencent", _get_tencent_quote),
+        ("sina", _get_sina_quote),
+    ):
+        try:
+            quote = loader(code)
+            sources.append(
+                {
+                    "id": source_id,
+                    "source": quote.get("source"),
+                    "price": quote.get("price"),
+                    "updated_at": quote.get("updated_at"),
+                }
+            )
+        except Exception as exc:
+            sources.append(
+                {"id": source_id, "error": str(exc)}
+            )
+    prices = [
+        _number(item.get("price"))
+        for item in sources
+        if _number(item.get("price")) and _number(item.get("price")) > 0
+    ]
+    available = [
+        (item.get("id"), _number(item.get("price")))
+        for item in sources
+        if _number(item.get("price")) and _number(item.get("price")) > 0
+    ]
+    gap = None
+    if len(prices) >= 2:
+        midpoint = sum(prices[:2]) / 2.0
+        gap = abs(prices[0] - prices[1]) / midpoint if midpoint else None
+    compared = None
+    if len(available) >= 2:
+        pair = available[:2]
+        midpoint = (pair[0][1] + pair[1][1]) / 2.0
+        gap = abs(pair[0][1] - pair[1][1]) / midpoint if midpoint else None
+        compared = [pair[0][0], pair[1][0]]
+    if gap is None:
+        status = "unavailable"
+    elif gap <= 0.01:
+        status = "verified"
+    else:
+        status = "mismatch"
+    return {
+        "symbol": code,
+        "status": status,
+        "price_gap_pct": round(gap, 6) if gap is not None else None,
+        "compared": compared,
+        "sources": sources,
+    }
 
 
 def _get_eastmoney_history(symbol: str, days: int = 252) -> list[dict]:

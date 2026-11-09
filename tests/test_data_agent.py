@@ -273,8 +273,8 @@ def test_collector_server_api_and_static_page(tmp_path):
 
         with urlopen(f"{base}/", timeout=5) as response:
             html = response.read().decode("utf-8")
-        assert "数据采集工作台" in html
-        assert 'id="collectionForm"' in html
+        assert "股票风险体检" in html
+        assert 'id="analysisForm"' in html
         assert "/app.js" in html
     finally:
         server.shutdown()

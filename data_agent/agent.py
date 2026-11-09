@@ -80,8 +80,14 @@ class DeepSeekClient:
             headers=headers,
             method="POST",
         )
+        proxy = str(os.getenv("DEEPSEEK_PROXY") or "").strip()
+        opener = urllib.request.build_opener()
+        if proxy:
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({"http": proxy, "https": proxy})
+            )
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            with opener.open(request, timeout=timeout) as response:
                 body = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")[:800]

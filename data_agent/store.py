@@ -356,3 +356,9 @@ class RawRunStore:
             "limit": page_size,
             "rows": matched[start : start + page_size],
         }
+
+    def all_rows(self, run_id: str, view: str) -> list[dict]:
+        """Read an entire raw view for deterministic local analysis."""
+        path = self.file_for_view(run_id, view)
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            return list(csv.DictReader(handle))

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from data_agent.agent import DeepSeekClient
+from data_agent.risk_service import RiskAnalysisService
 from data_agent.service import CollectorService
 from data_agent.store import VIEWS
 
@@ -21,6 +22,14 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
 
     def _service(self) -> CollectorService:
         return self.server.collector_service  # type: ignore[attr-defined]
+
+    def _risk_service(self) -> RiskAnalysisService:
+        service = self._service()
+        risk_service = getattr(service, "risk_service", None)
+        if risk_service is None:
+            risk_service = RiskAnalysisService(collector=service)
+            service.risk_service = risk_service
+        return risk_service
 
     def _send_json(self, payload: Any, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -71,6 +80,7 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
                         },
                         "sources": self._service().catalog(),
                         "recent_runs": runs,
+                        "recent_audits": self._risk_service().list_audits(limit=8),
                     }
                 )
                 return
@@ -80,6 +90,16 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
             if parsed.path == "/api/runs":
                 limit = int((query.get("limit") or ["30"])[0])
                 self._send_json({"items": self._service().store.list_runs(limit)})
+                return
+            if parsed.path == "/api/audits":
+                limit = int((query.get("limit") or ["20"])[0])
+                self._send_json({"items": self._risk_service().list_audits(limit)})
+                return
+            if parsed.path.startswith("/api/audits/"):
+                audit_id = urllib.parse.unquote(
+                    parsed.path.removeprefix("/api/audits/").strip("/")
+                )
+                self._send_json(self._risk_service().load_audit(audit_id))
                 return
             if parsed.path.startswith("/api/runs/"):
                 tail = parsed.path.removeprefix("/api/runs/").strip("/")
