@@ -175,6 +175,13 @@ def cmd_research(args: argparse.Namespace) -> int:
 
 
 def cmd_web(args: argparse.Namespace) -> int:
+    from data_agent.server import serve
+
+    serve(host=args.host, port=args.port)
+    return 0
+
+
+def cmd_research_web(args: argparse.Namespace) -> int:
     from webapp.server import serve
 
     serve(host=args.host, port=args.port)
@@ -307,9 +314,15 @@ def main(argv=None) -> int:
 
     sub.add_parser("repl", help="命令式交互模式")
 
-    web = sub.add_parser("web", help="启动股票组合风控 Web 工作台")
+    web = sub.add_parser("web", help="启动数据采集智能体 Web 工作台")
     web.add_argument("--host", default="127.0.0.1", help="监听地址，默认仅本机")
     web.add_argument("--port", type=int, default=8787, help="监听端口")
+
+    research_web = sub.add_parser(
+        "research-web", help="启动机器学习与组合风控工作台（后续研究模块）"
+    )
+    research_web.add_argument("--host", default="127.0.0.1", help="监听地址，默认仅本机")
+    research_web.add_argument("--port", type=int, default=8787, help="监听端口")
 
     args = parser.parse_args(argv)
     if args.command == "demo":
@@ -322,6 +335,8 @@ def main(argv=None) -> int:
         return cmd_repl()
     if args.command == "web":
         return cmd_web(args)
+    if args.command == "research-web":
+        return cmd_research_web(args)
     parser.print_help()
     return 0
 

@@ -1,0 +1,361 @@
+{
+  "schema_version": 1,
+  "run_id": "RAW-20261109-172227-E0CD14",
+  "created_at": "2026-11-09T17:22:28+08:00",
+  "status": "complete",
+  "request": {
+    "universe_size": 12,
+    "history_days": 60,
+    "include_quotes": true,
+    "symbols": [
+      "300308",
+      "300502",
+      "300750",
+      "688825",
+      "002384",
+      "688256",
+      "601138",
+      "300274",
+      "603986",
+      "600183",
+      "002463",
+      "300476"
+    ],
+    "query": "真实数据验收：采集 12 只高流动性 A 股最近 60 个交易日",
+    "source_policy": "auto: 东方财富优先，腾讯与新浪按接口回退"
+  },
+  "agent": {
+    "provider": "fixed"
+  },
+  "summary": {
+    "symbols": 12,
+    "requested_symbols": 12,
+    "daily_rows": 720,
+    "quote_rows": 12,
+    "failures": 0,
+    "date_min": "2026-08-10",
+    "date_max": "2026-11-09",
+    "sources": [
+      "东方财富前复权日行情"
+    ]
+  },
+  "quality": {
+    "symbol_count": 12,
+    "quote_symbol_count": 12,
+    "duplicate_keys": 0,
+    "invalid_price_rows": 0,
+    "missing_close": 0,
+    "missing_amount": 0,
+    "missing_volume": 0,
+    "date_min": "2026-08-10",
+    "date_max": "2026-11-09",
+    "rows_by_source": {
+      "东方财富前复权日行情": 720
+    },
+    "rows_by_adjustment": {
+      "qfq": 720
+    },
+    "symbols_missing_quotes": []
+  },
+  "failures": [],
+  "files": {
+    "daily": {
+      "path": "data/raw/RAW-20261109-172227-E0CD14/market_daily.csv",
+      "filename": "market_daily.csv",
+      "rows": 720,
+      "bytes": 123755,
+      "sha256": "899980cac7360ec2ef5a2d7697912088748f23fe7b26bc9e7f5dc65d65293db3",
+      "columns": [
+        "date",
+        "symbol",
+        "name",
+        "industry",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "amount",
+        "amplitude",
+        "change_pct",
+        "change",
+        "turnover",
+        "source",
+        "adjustment",
+        "fetched_at"
+      ]
+    },
+    "quotes": {
+      "path": "data/raw/RAW-20261109-172227-E0CD14/market_quotes.csv",
+      "filename": "market_quotes.csv",
+      "rows": 12,
+      "bytes": 2630,
+      "sha256": "a7041eea33a22dc6d0fcb9cd5dca22dd3b806c771e77209387370c0b1ef9d382",
+      "columns": [
+        "symbol",
+        "name",
+        "industry",
+        "price",
+        "open",
+        "high",
+        "low",
+        "prev_close",
+        "change",
+        "change_pct",
+        "turnover_rate",
+        "pe",
+        "pb",
+        "volume",
+        "amount",
+        "market_cap",
+        "float_market_cap",
+        "source",
+        "updated_at",
+        "fetched_at"
+      ]
+    },
+    "universe": {
+      "path": "data/raw/RAW-20261109-172227-E0CD14/universe.csv",
+      "filename": "universe.csv",
+      "rows": 12,
+      "bytes": 1855,
+      "sha256": "02d2a0587d8d0f6043ec103810b3e71e970b1754016ac2fcf82b88b61bc67dc3",
+      "columns": [
+        "symbol",
+        "name",
+        "industry",
+        "price",
+        "change_pct",
+        "volume",
+        "amount",
+        "turnover_rate",
+        "pe",
+        "market_cap",
+        "source",
+        "fetched_at"
+      ]
+    }
+  },
+  "lineage": [
+    {
+      "source": "东方财富前复权日行情",
+      "rows": 720,
+      "adjustment": [
+        "qfq"
+      ]
+    }
+  ],
+  "limitations": [
+    "股票池来自抓取时点的公开流动性快照，不是历史时点成分股。",
+    "公开接口可能延迟、限流或临时调整字段，失败记录保留在 failures 中。",
+    "腾讯和新浪的成交额可能由成交量与收盘价估算，具体以每行 source 为准。",
+    "原始数据未做后续研究清洗，缺失值、停牌和异常值需由数据治理环节复核。"
+  ],
+  "trace": [
+    {
+      "time": "2026-11-09T17:22:24+08:00",
+      "event": "universe",
+      "message": "开始确定股票池"
+    },
+    {
+      "time": "2026-11-09T17:22:24+08:00",
+      "event": "universe",
+      "message": "获取当前高流动性股票池: 12 只",
+      "sources": [
+        "东方财富公开行情"
+      ]
+    },
+    {
+      "time": "2026-11-09T17:22:24+08:00",
+      "event": "fetch",
+      "message": "抓取 300308 历史行情",
+      "current": 0,
+      "total": 12,
+      "percent": 0
+    },
+    {
+      "time": "2026-11-09T17:22:24+08:00",
+      "event": "fetch",
+      "message": "300308 完成: 60 行",
+      "current": 1,
+      "total": 12,
+      "percent": 8
+    },
+    {
+      "time": "2026-11-09T17:22:24+08:00",
+      "event": "fetch",
+      "message": "抓取 300502 历史行情",
+      "current": 1,
+      "total": 12,
+      "percent": 8
+    },
+    {
+      "time": "2026-11-09T17:22:25+08:00",
+      "event": "fetch",
+      "message": "300502 完成: 60 行",
+      "current": 2,
+      "total": 12,
+      "percent": 17
+    },
+    {
+      "time": "2026-11-09T17:22:25+08:00",
+      "event": "fetch",
+      "message": "抓取 300750 历史行情",
+      "current": 2,
+      "total": 12,
+      "percent": 17
+    },
+    {
+      "time": "2026-11-09T17:22:25+08:00",
+      "event": "fetch",
+      "message": "300750 完成: 60 行",
+      "current": 3,
+      "total": 12,
+      "percent": 25
+    },
+    {
+      "time": "2026-11-09T17:22:25+08:00",
+      "event": "fetch",
+      "message": "抓取 688825 历史行情",
+      "current": 3,
+      "total": 12,
+      "percent": 25
+    },
+    {
+      "time": "2026-11-09T17:22:25+08:00",
+      "event": "fetch",
+      "message": "688825 完成: 60 行",
+      "current": 4,
+      "total": 12,
+      "percent": 33
+    },
+    {
+      "time": "2026-11-09T17:22:25+08:00",
+      "event": "fetch",
+      "message": "抓取 002384 历史行情",
+      "current": 4,
+      "total": 12,
+      "percent": 33
+    },
+    {
+      "time": "2026-11-09T17:22:25+08:00",
+      "event": "fetch",
+      "message": "002384 完成: 60 行",
+      "current": 5,
+      "total": 12,
+      "percent": 42
+    },
+    {
+      "time": "2026-11-09T17:22:25+08:00",
+      "event": "fetch",
+      "message": "抓取 688256 历史行情",
+      "current": 5,
+      "total": 12,
+      "percent": 42
+    },
+    {
+      "time": "2026-11-09T17:22:26+08:00",
+      "event": "fetch",
+      "message": "688256 完成: 60 行",
+      "current": 6,
+      "total": 12,
+      "percent": 50
+    },
+    {
+      "time": "2026-11-09T17:22:26+08:00",
+      "event": "fetch",
+      "message": "抓取 601138 历史行情",
+      "current": 6,
+      "total": 12,
+      "percent": 50
+    },
+    {
+      "time": "2026-11-09T17:22:26+08:00",
+      "event": "fetch",
+      "message": "601138 完成: 60 行",
+      "current": 7,
+      "total": 12,
+      "percent": 58
+    },
+    {
+      "time": "2026-11-09T17:22:26+08:00",
+      "event": "fetch",
+      "message": "抓取 300274 历史行情",
+      "current": 7,
+      "total": 12,
+      "percent": 58
+    },
+    {
+      "time": "2026-11-09T17:22:26+08:00",
+      "event": "fetch",
+      "message": "300274 完成: 60 行",
+      "current": 8,
+      "total": 12,
+      "percent": 67
+    },
+    {
+      "time": "2026-11-09T17:22:26+08:00",
+      "event": "fetch",
+      "message": "抓取 603986 历史行情",
+      "current": 8,
+      "total": 12,
+      "percent": 67
+    },
+    {
+      "time": "2026-11-09T17:22:27+08:00",
+      "event": "fetch",
+      "message": "603986 完成: 60 行",
+      "current": 9,
+      "total": 12,
+      "percent": 75
+    },
+    {
+      "time": "2026-11-09T17:22:27+08:00",
+      "event": "fetch",
+      "message": "抓取 600183 历史行情",
+      "current": 9,
+      "total": 12,
+      "percent": 75
+    },
+    {
+      "time": "2026-11-09T17:22:27+08:00",
+      "event": "fetch",
+      "message": "600183 完成: 60 行",
+      "current": 10,
+      "total": 12,
+      "percent": 83
+    },
+    {
+      "time": "2026-11-09T17:22:27+08:00",
+      "event": "fetch",
+      "message": "抓取 002463 历史行情",
+      "current": 10,
+      "total": 12,
+      "percent": 83
+    },
+    {
+      "time": "2026-11-09T17:22:27+08:00",
+      "event": "fetch",
+      "message": "002463 完成: 60 行",
+      "current": 11,
+      "total": 12,
+      "percent": 92
+    },
+    {
+      "time": "2026-11-09T17:22:27+08:00",
+      "event": "fetch",
+      "message": "抓取 300476 历史行情",
+      "current": 11,
+      "total": 12,
+      "percent": 92
+    },
+    {
+      "time": "2026-11-09T17:22:27+08:00",
+      "event": "fetch",
+      "message": "300476 完成: 60 行",
+      "current": 12,
+      "total": 12,
+      "percent": 100
+    }
+  ]
+}

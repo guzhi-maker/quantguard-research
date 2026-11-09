@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="QuantGuard 公开证券数据采集工作台">
+  <title>QuantGuard | 数据采集智能体</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand">
+        <div class="brand-mark">QG</div>
+        <div>
+          <strong>QuantGuard</strong>
+          <span>DATA ACQUISITION</span>
+        </div>
+      </div>
+
+      <nav class="primary-nav" aria-label="工作区">
+        <button class="nav-item is-active" type="button" data-view="workbench">
+          <span>采集工作台</span><span class="nav-index">01</span>
+        </button>
+        <button class="nav-item" type="button" data-view="sources">
+          <span>数据源</span><span class="nav-index">02</span>
+        </button>
+        <button class="nav-item" type="button" data-view="runs">
+          <span>采集记录</span><span class="nav-index">03</span>
+        </button>
+        <button class="nav-item" type="button" data-view="data">
+          <span>原始数据</span><span class="nav-index">04</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-status">
+        <span class="status-line"><i id="agentDot" class="status-dot"></i><span id="agentSidebarText">检查智能体状态</span></span>
+        <span class="sidebar-meta">LOCAL RESEARCH WORKSTATION</span>
+        <span class="sidebar-meta" id="currentTime">--</span>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="topbar-title">
+          <span class="topbar-kicker">A / 公开数据与智能体</span>
+          <strong>原始数据获取</strong>
+        </div>
+        <div class="topbar-status">
+          <span class="chip" id="agentChip">DeepSeek 检测中</span>
+          <span class="chip" id="runCountChip">0 份快照</span>
+          <span class="chip chip-neutral">只读采集 · 不交易</span>
+        </div>
+      </header>
+
+      <div class="view-stack">
+        <section class="page is-active" data-page="workbench" aria-labelledby="workbenchTitle">
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow">COLLECTION DESK / 2026</span>
+              <h1 id="workbenchTitle">数据采集工作台</h1>
+              <p>从公开行情接口获取可追溯的股票池、实时快照与历史日线，并生成原始数据清单。</p>
+            </div>
+            <button class="text-action" type="button" id="refreshButton">刷新状态</button>
+          </div>
+
+          <section class="command-panel" aria-labelledby="commandTitle">
+            <div class="section-heading">
+              <div>
+                <span class="section-index">TASK / 01</span>
+                <h2 id="commandTitle">采集任务</h2>
+              </div>
+              <span class="section-note">工具调用记录将写入任务轨迹</span>
+            </div>
+
+            <form id="collectionForm">
+              <label class="task-label" for="taskQuery">研究指令</label>
+              <textarea id="taskQuery" rows="3" maxlength="500">采集当前成交额最高的 80 只 A 股，保存最近 500 个交易日的前复权日线和当前行情快照。</textarea>
+
+              <div class="form-grid">
+                <label class="field">
+                  <span>股票池数量</span>
+                  <input id="universeSize" type="number" min="10" max="200" step="10" value="80">
+                </label>
+                <label class="field">
+                  <span>历史交易日</span>
+                  <input id="historyDays" type="number" min="30" max="500" step="10" value="500">
+                </label>
+                <label class="field">
+                  <span>指定股票代码</span>
+                  <input id="symbolInput" type="text" inputmode="numeric" placeholder="可选，如 600519,000001">
+                </label>
+                <label class="field field-switch">
+                  <span>当前行情快照</span>
+                  <span class="switch-row">
+                    <input id="includeQuotes" type="checkbox" checked>
+                    <span class="switch" aria-hidden="true"></span>
+                    <strong id="quoteSwitchLabel">保存</strong>
+                  </span>
+                </label>
+              </div>
+
+              <div class="command-actions">
+                <button class="button button-primary" type="submit" data-mode="agent" id="agentRunButton">
+                  <span>交给 DeepSeek 采集</span>
+                  <span class="button-code">AGENT</span>
+                </button>
+                <button class="button button-secondary" type="submit" data-mode="fixed" id="fixedRunButton">
+                  <span>固定流程采集</span>
+                  <span class="button-code">DIRECT</span>
+                </button>
+                <p id="formHint">智能体只调用已注册数据工具，不生成行情数值。</p>
+              </div>
+            </form>
+          </section>
+
+          <section class="run-console" aria-labelledby="runConsoleTitle">
+            <div class="console-heading">
+              <div>
+                <span class="section-index">EXECUTION / 02</span>
+                <h2 id="runConsoleTitle">任务轨迹</h2>
+              </div>
+              <div class="console-state">
+                <span id="jobStage" class="status-label">等待任务</span>
+                <span id="jobPercent">0%</span>
+              </div>
+            </div>
+            <div class="progress-track" aria-label="采集进度">
+              <div id="progressBar" class="progress-bar"></div>
+            </div>
+            <div class="console-grid">
+              <div class="trace-list" id="traceList" aria-live="polite">
+                <div class="empty-inline">尚未运行任务。可先探测数据源，或直接开始采集。</div>
+              </div>
+              <aside class="run-summary" aria-label="任务摘要">
+                <span class="summary-label">RUN OUTPUT</span>
+                <strong id="jobRunId">—</strong>
+                <dl>
+                  <div><dt>股票</dt><dd id="jobSymbols">—</dd></div>
+                  <div><dt>原始行数</dt><dd id="jobRows">—</dd></div>
+                  <div><dt>实际来源</dt><dd id="jobSources">—</dd></div>
+                  <div><dt>失败</dt><dd id="jobFailures">—</dd></div>
+                </dl>
+                <button id="openLatestRun" class="button button-quiet" type="button" disabled>查看原始数据</button>
+              </aside>
+            </div>
+          </section>
+
+          <div class="metric-strip" aria-label="最新采集摘要">
+            <div class="metric-cell"><span>最新快照</span><strong id="metricRun">—</strong><small id="metricRunTime">暂无采集记录</small></div>
+            <div class="metric-cell"><span>股票覆盖</span><strong id="metricSymbols">—</strong><small>有效代码数</small></div>
+            <div class="metric-cell"><span>日线行数</span><strong id="metricRows">—</strong><small>完整原始记录</small></div>
+            <div class="metric-cell"><span>交易日范围</span><strong id="metricRange">—</strong><small>首末行情日期</small></div>
+            <div class="metric-cell"><span>失败代码</span><strong id="metricFailures">—</strong><small>保留在清单中</small></div>
+          </div>
+
+          <div class="split-layout">
+            <section class="panel" aria-labelledby="sourcePreviewTitle">
+              <div class="panel-heading">
+                <div><span class="section-index">SOURCE HEALTH</span><h2 id="sourcePreviewTitle">数据源状态</h2></div>
+                <button class="button button-compact" id="probeSourcesButton" type="button">探测全部</button>
+              </div>
+              <div id="sourcePreview" class="source-list"></div>
+            </section>
+            <section class="panel" aria-labelledby="deliveryTitle">
+              <div class="panel-heading">
+                <div><span class="section-index">HANDOFF</span><h2 id="deliveryTitle">交接状态</h2></div>
+                <span class="status-label">RAW ONLY</span>
+              </div>
+              <div class="handoff-grid">
+                <div><strong id="handoffManifest">待生成</strong><span>manifest</span></div>
+                <div><strong id="handoffDaily">待生成</strong><span>日线 CSV</span></div>
+                <div><strong id="handoffHash">待生成</strong><span>SHA256</span></div>
+                <div><strong id="handoffLineage">待生成</strong><span>来源血缘</span></div>
+              </div>
+            </section>
+          </div>
+
+          <section class="panel table-panel" aria-labelledby="recentRunsTitle">
+            <div class="panel-heading">
+              <div><span class="section-index">SNAPSHOTS</span><h2 id="recentRunsTitle">最近采集</h2></div>
+              <button class="button button-compact" type="button" data-go-view="runs">全部记录</button>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead><tr><th>采集编号</th><th>创建时间</th><th>股票</th><th>行数</th><th>区间</th><th>模式</th><th>状态</th><th></th></tr></thead>
+                <tbody id="recentRunsBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" data-page="sources" aria-labelledby="sourcesTitle">
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow">SOURCE REGISTRY</span>
+              <h1 id="sourcesTitle">公开数据源</h1>
+              <p>注册表固定数据能力、复权口径和已知限制。智能体只能从这里选择接口。</p>
+            </div>
+            <button class="button button-secondary" id="probeSourcesPageButton" type="button">探测全部</button>
+          </div>
+          <div id="sourceCards" class="source-card-grid"></div>
+          <section class="panel table-panel">
+            <div class="panel-heading"><div><span class="section-index">FIELD CONTRACT</span><h2>字段与约束</h2></div></div>
+            <div class="table-shell">
+              <table>
+                <thead><tr><th>数据源</th><th>优先级</th><th>能力</th><th>复权口径</th><th>成交额质量</th><th>访问方式</th><th>最近探测</th></tr></thead>
+                <tbody id="sourceTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" data-page="runs" aria-labelledby="runsTitle">
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow">APPEND-ONLY SNAPSHOTS</span>
+              <h1 id="runsTitle">采集记录</h1>
+              <p>每次采集创建独立编号，原始文件只追加不覆盖，清单可复核来源与失败项。</p>
+            </div>
+            <button class="button button-secondary" id="refreshRunsButton" type="button">刷新记录</button>
+          </div>
+          <section class="panel table-panel">
+            <div class="table-shell">
+              <table>
+                <thead><tr><th>采集编号</th><th>创建时间</th><th>模式</th><th>股票</th><th>日线行数</th><th>数据区间</th><th>来源</th><th>失败</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="runsTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" data-page="data" aria-labelledby="dataTitle">
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow">RAW DATA BROWSER</span>
+              <h1 id="dataTitle">原始数据</h1>
+              <p>浏览当前快照的完整日线、行情快照和股票池元数据。</p>
+            </div>
+            <select id="runSelector" class="select-control" aria-label="选择采集记录"></select>
+          </div>
+
+          <section class="dataset-head">
+            <div>
+              <span class="summary-label">ACTIVE DATASET</span>
+              <strong id="datasetRunId">尚未选择采集记录</strong>
+              <p id="datasetMeta">运行一次采集后即可浏览原始 CSV。</p>
+            </div>
+            <div class="dataset-actions">
+              <button class="button button-compact" type="button" data-export-view="daily">导出日线 CSV</button>
+              <button class="button button-compact" type="button" data-export-view="quotes">导出行情 CSV</button>
+              <button class="button button-compact" type="button" data-export-view="universe">导出股票池 CSV</button>
+            </div>
+          </section>
+
+          <section class="panel table-panel">
+            <div class="browser-toolbar">
+              <div class="segmented" role="tablist" aria-label="数据视图">
+                <button type="button" class="segment is-active" data-view="daily">日线</button>
+                <button type="button" class="segment" data-view="quotes">行情快照</button>
+                <button type="button" class="segment" data-view="universe">股票池</button>
+              </div>
+              <label class="search-field">
+                <span class="visually-hidden">搜索原始数据</span>
+                <input id="datasetQuery" type="search" placeholder="筛选代码、名称、来源或日期">
+              </label>
+              <button class="button button-secondary" id="datasetSearchButton" type="button">筛选</button>
+            </div>
+            <div class="table-meta">
+              <span id="datasetTotal">0 行</span>
+              <span id="datasetPage">第 1 页</span>
+            </div>
+            <div class="table-shell table-shell-large">
+              <table>
+                <thead id="datasetHead"></thead>
+                <tbody id="datasetBody"></tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <button class="button button-compact" id="prevPage" type="button">上一页</button>
+              <button class="button button-compact" id="nextPage" type="button">下一页</button>
+            </div>
+          </section>
+        </section>
+      </div>
+
+      <footer class="app-footer">
+        <span>QuantGuard / Public Market Data Collection</span>
+        <span>数据用于课程研究，不构成投资建议。</span>
+      </footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

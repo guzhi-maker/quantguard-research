@@ -1,0 +1,1517 @@
+{
+  "schema_version": 1,
+  "run_id": "RAW-20261109-172454-6DC068",
+  "created_at": "2026-11-09T17:24:55+08:00",
+  "status": "complete",
+  "request": {
+    "universe_size": 80,
+    "history_days": 500,
+    "include_quotes": true,
+    "symbols": [
+      "300308",
+      "300502",
+      "300750",
+      "688825",
+      "002384",
+      "688256",
+      "601138",
+      "300274",
+      "603986",
+      "600183",
+      "002463",
+      "300476",
+      "600487",
+      "688836",
+      "002371",
+      "600641",
+      "300413",
+      "300136",
+      "688012",
+      "300394",
+      "688347",
+      "688498",
+      "688008",
+      "603259",
+      "002428",
+      "300364",
+      "002636",
+      "600118",
+      "601899",
+      "300058",
+      "300418",
+      "300489",
+      "300223",
+      "600519",
+      "688041",
+      "600176",
+      "002475",
+      "603228",
+      "688585",
+      "601869",
+      "300014",
+      "002086",
+      "300408",
+      "300433",
+      "002929",
+      "603893",
+      "601398",
+      "301171",
+      "600036",
+      "600206",
+      "600498",
+      "000725",
+      "300857",
+      "603083",
+      "600522",
+      "002436",
+      "300118",
+      "002639",
+      "002241",
+      "300751",
+      "002865",
+      "688072",
+      "688361",
+      "601599",
+      "300006",
+      "002281",
+      "300666",
+      "301313",
+      "600900",
+      "002156",
+      "300604",
+      "688017",
+      "600584",
+      "600276",
+      "000338",
+      "603186",
+      "002916",
+      "002353",
+      "600127",
+      "300115"
+    ],
+    "query": "默认研究快照：当前成交额最高的 80 只 A 股，最近 500 个交易日",
+    "source_policy": "auto: 东方财富优先，腾讯与新浪按接口回退"
+  },
+  "agent": {
+    "provider": "fixed"
+  },
+  "summary": {
+    "symbols": 80,
+    "requested_symbols": 80,
+    "daily_rows": 39123,
+    "quote_rows": 80,
+    "failures": 0,
+    "date_min": "2024-09-23",
+    "date_max": "2026-11-09",
+    "sources": [
+      "东方财富前复权日行情"
+    ]
+  },
+  "quality": {
+    "symbol_count": 80,
+    "quote_symbol_count": 80,
+    "duplicate_keys": 0,
+    "invalid_price_rows": 0,
+    "missing_close": 0,
+    "missing_amount": 0,
+    "missing_volume": 0,
+    "date_min": "2024-09-23",
+    "date_max": "2026-11-09",
+    "rows_by_source": {
+      "东方财富前复权日行情": 39123
+    },
+    "rows_by_adjustment": {
+      "qfq": 39123
+    },
+    "symbols_missing_quotes": []
+  },
+  "failures": [],
+  "files": {
+    "daily": {
+      "path": "data/raw/RAW-20261109-172454-6DC068/market_daily.csv",
+      "filename": "market_daily.csv",
+      "rows": 39123,
+      "bytes": 6697104,
+      "sha256": "39e29cb2888fdfe2a2be55a6f4a8d03b2687047358f71b6785a48bef7b07d5ff",
+      "columns": [
+        "date",
+        "symbol",
+        "name",
+        "industry",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "amount",
+        "amplitude",
+        "change_pct",
+        "change",
+        "turnover",
+        "source",
+        "adjustment",
+        "fetched_at"
+      ]
+    },
+    "quotes": {
+      "path": "data/raw/RAW-20261109-172454-6DC068/market_quotes.csv",
+      "filename": "market_quotes.csv",
+      "rows": 80,
+      "bytes": 16580,
+      "sha256": "b6f9c16f9b2a2438cbca41ac980dda7aeec4b6ae25ae59bfb6b51de2db632de2",
+      "columns": [
+        "symbol",
+        "name",
+        "industry",
+        "price",
+        "open",
+        "high",
+        "low",
+        "prev_close",
+        "change",
+        "change_pct",
+        "turnover_rate",
+        "pe",
+        "pb",
+        "volume",
+        "amount",
+        "market_cap",
+        "float_market_cap",
+        "source",
+        "updated_at",
+        "fetched_at"
+      ]
+    },
+    "universe": {
+      "path": "data/raw/RAW-20261109-172454-6DC068/universe.csv",
+      "filename": "universe.csv",
+      "rows": 80,
+      "bytes": 11870,
+      "sha256": "76c44cec800be8e71a7f0f81e650b1bf89fed15355fa6224b0cf3c99e4c87820",
+      "columns": [
+        "symbol",
+        "name",
+        "industry",
+        "price",
+        "change_pct",
+        "volume",
+        "amount",
+        "turnover_rate",
+        "pe",
+        "market_cap",
+        "source",
+        "fetched_at"
+      ]
+    }
+  },
+  "lineage": [
+    {
+      "source": "东方财富前复权日行情",
+      "rows": 39123,
+      "adjustment": [
+        "qfq"
+      ]
+    }
+  ],
+  "limitations": [
+    "股票池来自抓取时点的公开流动性快照，不是历史时点成分股。",
+    "公开接口可能延迟、限流或临时调整字段，失败记录保留在 failures 中。",
+    "腾讯和新浪的成交额可能由成交量与收盘价估算，具体以每行 source 为准。",
+    "原始数据未做后续研究清洗，缺失值、停牌和异常值需由数据治理环节复核。"
+  ],
+  "trace": [
+    {
+      "time": "2026-11-09T17:24:18+08:00",
+      "event": "universe",
+      "message": "开始确定股票池"
+    },
+    {
+      "time": "2026-11-09T17:24:18+08:00",
+      "event": "universe",
+      "message": "获取当前高流动性股票池: 80 只",
+      "sources": [
+        "东方财富公开行情"
+      ]
+    },
+    {
+      "time": "2026-11-09T17:24:18+08:00",
+      "event": "fetch",
+      "message": "抓取 300308 历史行情",
+      "current": 0,
+      "total": 80,
+      "percent": 0
+    },
+    {
+      "time": "2026-11-09T17:24:19+08:00",
+      "event": "fetch",
+      "message": "300308 完成: 500 行",
+      "current": 1,
+      "total": 80,
+      "percent": 1
+    },
+    {
+      "time": "2026-11-09T17:24:19+08:00",
+      "event": "fetch",
+      "message": "抓取 300502 历史行情",
+      "current": 1,
+      "total": 80,
+      "percent": 1
+    },
+    {
+      "time": "2026-11-09T17:24:19+08:00",
+      "event": "fetch",
+      "message": "300502 完成: 500 行",
+      "current": 2,
+      "total": 80,
+      "percent": 2
+    },
+    {
+      "time": "2026-11-09T17:24:19+08:00",
+      "event": "fetch",
+      "message": "抓取 300750 历史行情",
+      "current": 2,
+      "total": 80,
+      "percent": 2
+    },
+    {
+      "time": "2026-11-09T17:24:20+08:00",
+      "event": "fetch",
+      "message": "300750 完成: 500 行",
+      "current": 3,
+      "total": 80,
+      "percent": 4
+    },
+    {
+      "time": "2026-11-09T17:24:20+08:00",
+      "event": "fetch",
+      "message": "抓取 688825 历史行情",
+      "current": 3,
+      "total": 80,
+      "percent": 4
+    },
+    {
+      "time": "2026-11-09T17:24:20+08:00",
+      "event": "fetch",
+      "message": "688825 完成: 70 行",
+      "current": 4,
+      "total": 80,
+      "percent": 5
+    },
+    {
+      "time": "2026-11-09T17:24:20+08:00",
+      "event": "fetch",
+      "message": "抓取 002384 历史行情",
+      "current": 4,
+      "total": 80,
+      "percent": 5
+    },
+    {
+      "time": "2026-11-09T17:24:21+08:00",
+      "event": "fetch",
+      "message": "002384 完成: 500 行",
+      "current": 5,
+      "total": 80,
+      "percent": 6
+    },
+    {
+      "time": "2026-11-09T17:24:21+08:00",
+      "event": "fetch",
+      "message": "抓取 688256 历史行情",
+      "current": 5,
+      "total": 80,
+      "percent": 6
+    },
+    {
+      "time": "2026-11-09T17:24:21+08:00",
+      "event": "fetch",
+      "message": "688256 完成: 500 行",
+      "current": 6,
+      "total": 80,
+      "percent": 8
+    },
+    {
+      "time": "2026-11-09T17:24:21+08:00",
+      "event": "fetch",
+      "message": "抓取 601138 历史行情",
+      "current": 6,
+      "total": 80,
+      "percent": 8
+    },
+    {
+      "time": "2026-11-09T17:24:22+08:00",
+      "event": "fetch",
+      "message": "601138 完成: 500 行",
+      "current": 7,
+      "total": 80,
+      "percent": 9
+    },
+    {
+      "time": "2026-11-09T17:24:22+08:00",
+      "event": "fetch",
+      "message": "抓取 300274 历史行情",
+      "current": 7,
+      "total": 80,
+      "percent": 9
+    },
+    {
+      "time": "2026-11-09T17:24:22+08:00",
+      "event": "fetch",
+      "message": "300274 完成: 500 行",
+      "current": 8,
+      "total": 80,
+      "percent": 10
+    },
+    {
+      "time": "2026-11-09T17:24:22+08:00",
+      "event": "fetch",
+      "message": "抓取 603986 历史行情",
+      "current": 8,
+      "total": 80,
+      "percent": 10
+    },
+    {
+      "time": "2026-11-09T17:24:22+08:00",
+      "event": "fetch",
+      "message": "603986 完成: 500 行",
+      "current": 9,
+      "total": 80,
+      "percent": 11
+    },
+    {
+      "time": "2026-11-09T17:24:22+08:00",
+      "event": "fetch",
+      "message": "抓取 600183 历史行情",
+      "current": 9,
+      "total": 80,
+      "percent": 11
+    },
+    {
+      "time": "2026-11-09T17:24:23+08:00",
+      "event": "fetch",
+      "message": "600183 完成: 500 行",
+      "current": 10,
+      "total": 80,
+      "percent": 12
+    },
+    {
+      "time": "2026-11-09T17:24:23+08:00",
+      "event": "fetch",
+      "message": "抓取 002463 历史行情",
+      "current": 10,
+      "total": 80,
+      "percent": 12
+    },
+    {
+      "time": "2026-11-09T17:24:23+08:00",
+      "event": "fetch",
+      "message": "002463 完成: 500 行",
+      "current": 11,
+      "total": 80,
+      "percent": 14
+    },
+    {
+      "time": "2026-11-09T17:24:23+08:00",
+      "event": "fetch",
+      "message": "抓取 300476 历史行情",
+      "current": 11,
+      "total": 80,
+      "percent": 14
+    },
+    {
+      "time": "2026-11-09T17:24:24+08:00",
+      "event": "fetch",
+      "message": "300476 完成: 500 行",
+      "current": 12,
+      "total": 80,
+      "percent": 15
+    },
+    {
+      "time": "2026-11-09T17:24:24+08:00",
+      "event": "fetch",
+      "message": "抓取 600487 历史行情",
+      "current": 12,
+      "total": 80,
+      "percent": 15
+    },
+    {
+      "time": "2026-11-09T17:24:24+08:00",
+      "event": "fetch",
+      "message": "600487 完成: 500 行",
+      "current": 13,
+      "total": 80,
+      "percent": 16
+    },
+    {
+      "time": "2026-11-09T17:24:24+08:00",
+      "event": "fetch",
+      "message": "抓取 688836 历史行情",
+      "current": 13,
+      "total": 80,
+      "percent": 16
+    },
+    {
+      "time": "2026-11-09T17:24:25+08:00",
+      "event": "fetch",
+      "message": "688836 完成: 53 行",
+      "current": 14,
+      "total": 80,
+      "percent": 18
+    },
+    {
+      "time": "2026-11-09T17:24:25+08:00",
+      "event": "fetch",
+      "message": "抓取 002371 历史行情",
+      "current": 14,
+      "total": 80,
+      "percent": 18
+    },
+    {
+      "time": "2026-11-09T17:24:25+08:00",
+      "event": "fetch",
+      "message": "002371 完成: 500 行",
+      "current": 15,
+      "total": 80,
+      "percent": 19
+    },
+    {
+      "time": "2026-11-09T17:24:25+08:00",
+      "event": "fetch",
+      "message": "抓取 600641 历史行情",
+      "current": 15,
+      "total": 80,
+      "percent": 19
+    },
+    {
+      "time": "2026-11-09T17:24:25+08:00",
+      "event": "fetch",
+      "message": "600641 完成: 500 行",
+      "current": 16,
+      "total": 80,
+      "percent": 20
+    },
+    {
+      "time": "2026-11-09T17:24:25+08:00",
+      "event": "fetch",
+      "message": "抓取 300413 历史行情",
+      "current": 16,
+      "total": 80,
+      "percent": 20
+    },
+    {
+      "time": "2026-11-09T17:24:26+08:00",
+      "event": "fetch",
+      "message": "300413 完成: 500 行",
+      "current": 17,
+      "total": 80,
+      "percent": 21
+    },
+    {
+      "time": "2026-11-09T17:24:26+08:00",
+      "event": "fetch",
+      "message": "抓取 300136 历史行情",
+      "current": 17,
+      "total": 80,
+      "percent": 21
+    },
+    {
+      "time": "2026-11-09T17:24:26+08:00",
+      "event": "fetch",
+      "message": "300136 完成: 500 行",
+      "current": 18,
+      "total": 80,
+      "percent": 22
+    },
+    {
+      "time": "2026-11-09T17:24:26+08:00",
+      "event": "fetch",
+      "message": "抓取 688012 历史行情",
+      "current": 18,
+      "total": 80,
+      "percent": 22
+    },
+    {
+      "time": "2026-11-09T17:24:27+08:00",
+      "event": "fetch",
+      "message": "688012 完成: 500 行",
+      "current": 19,
+      "total": 80,
+      "percent": 24
+    },
+    {
+      "time": "2026-11-09T17:24:27+08:00",
+      "event": "fetch",
+      "message": "抓取 300394 历史行情",
+      "current": 19,
+      "total": 80,
+      "percent": 24
+    },
+    {
+      "time": "2026-11-09T17:24:27+08:00",
+      "event": "fetch",
+      "message": "300394 完成: 500 行",
+      "current": 20,
+      "total": 80,
+      "percent": 25
+    },
+    {
+      "time": "2026-11-09T17:24:27+08:00",
+      "event": "fetch",
+      "message": "抓取 688347 历史行情",
+      "current": 20,
+      "total": 80,
+      "percent": 25
+    },
+    {
+      "time": "2026-11-09T17:24:28+08:00",
+      "event": "fetch",
+      "message": "688347 完成: 500 行",
+      "current": 21,
+      "total": 80,
+      "percent": 26
+    },
+    {
+      "time": "2026-11-09T17:24:28+08:00",
+      "event": "fetch",
+      "message": "抓取 688498 历史行情",
+      "current": 21,
+      "total": 80,
+      "percent": 26
+    },
+    {
+      "time": "2026-11-09T17:24:28+08:00",
+      "event": "fetch",
+      "message": "688498 完成: 500 行",
+      "current": 22,
+      "total": 80,
+      "percent": 28
+    },
+    {
+      "time": "2026-11-09T17:24:28+08:00",
+      "event": "fetch",
+      "message": "抓取 688008 历史行情",
+      "current": 22,
+      "total": 80,
+      "percent": 28
+    },
+    {
+      "time": "2026-11-09T17:24:29+08:00",
+      "event": "fetch",
+      "message": "688008 完成: 500 行",
+      "current": 23,
+      "total": 80,
+      "percent": 29
+    },
+    {
+      "time": "2026-11-09T17:24:29+08:00",
+      "event": "fetch",
+      "message": "抓取 603259 历史行情",
+      "current": 23,
+      "total": 80,
+      "percent": 29
+    },
+    {
+      "time": "2026-11-09T17:24:29+08:00",
+      "event": "fetch",
+      "message": "603259 完成: 500 行",
+      "current": 24,
+      "total": 80,
+      "percent": 30
+    },
+    {
+      "time": "2026-11-09T17:24:29+08:00",
+      "event": "fetch",
+      "message": "抓取 002428 历史行情",
+      "current": 24,
+      "total": 80,
+      "percent": 30
+    },
+    {
+      "time": "2026-11-09T17:24:30+08:00",
+      "event": "fetch",
+      "message": "002428 完成: 500 行",
+      "current": 25,
+      "total": 80,
+      "percent": 31
+    },
+    {
+      "time": "2026-11-09T17:24:30+08:00",
+      "event": "fetch",
+      "message": "抓取 300364 历史行情",
+      "current": 25,
+      "total": 80,
+      "percent": 31
+    },
+    {
+      "time": "2026-11-09T17:24:30+08:00",
+      "event": "fetch",
+      "message": "300364 完成: 500 行",
+      "current": 26,
+      "total": 80,
+      "percent": 32
+    },
+    {
+      "time": "2026-11-09T17:24:30+08:00",
+      "event": "fetch",
+      "message": "抓取 002636 历史行情",
+      "current": 26,
+      "total": 80,
+      "percent": 32
+    },
+    {
+      "time": "2026-11-09T17:24:30+08:00",
+      "event": "fetch",
+      "message": "002636 完成: 500 行",
+      "current": 27,
+      "total": 80,
+      "percent": 34
+    },
+    {
+      "time": "2026-11-09T17:24:30+08:00",
+      "event": "fetch",
+      "message": "抓取 600118 历史行情",
+      "current": 27,
+      "total": 80,
+      "percent": 34
+    },
+    {
+      "time": "2026-11-09T17:24:31+08:00",
+      "event": "fetch",
+      "message": "600118 完成: 500 行",
+      "current": 28,
+      "total": 80,
+      "percent": 35
+    },
+    {
+      "time": "2026-11-09T17:24:31+08:00",
+      "event": "fetch",
+      "message": "抓取 601899 历史行情",
+      "current": 28,
+      "total": 80,
+      "percent": 35
+    },
+    {
+      "time": "2026-11-09T17:24:31+08:00",
+      "event": "fetch",
+      "message": "601899 完成: 500 行",
+      "current": 29,
+      "total": 80,
+      "percent": 36
+    },
+    {
+      "time": "2026-11-09T17:24:31+08:00",
+      "event": "fetch",
+      "message": "抓取 300058 历史行情",
+      "current": 29,
+      "total": 80,
+      "percent": 36
+    },
+    {
+      "time": "2026-11-09T17:24:32+08:00",
+      "event": "fetch",
+      "message": "300058 完成: 500 行",
+      "current": 30,
+      "total": 80,
+      "percent": 38
+    },
+    {
+      "time": "2026-11-09T17:24:32+08:00",
+      "event": "fetch",
+      "message": "抓取 300418 历史行情",
+      "current": 30,
+      "total": 80,
+      "percent": 38
+    },
+    {
+      "time": "2026-11-09T17:24:32+08:00",
+      "event": "fetch",
+      "message": "300418 完成: 500 行",
+      "current": 31,
+      "total": 80,
+      "percent": 39
+    },
+    {
+      "time": "2026-11-09T17:24:32+08:00",
+      "event": "fetch",
+      "message": "抓取 300489 历史行情",
+      "current": 31,
+      "total": 80,
+      "percent": 39
+    },
+    {
+      "time": "2026-11-09T17:24:33+08:00",
+      "event": "fetch",
+      "message": "300489 完成: 500 行",
+      "current": 32,
+      "total": 80,
+      "percent": 40
+    },
+    {
+      "time": "2026-11-09T17:24:33+08:00",
+      "event": "fetch",
+      "message": "抓取 300223 历史行情",
+      "current": 32,
+      "total": 80,
+      "percent": 40
+    },
+    {
+      "time": "2026-11-09T17:24:33+08:00",
+      "event": "fetch",
+      "message": "300223 完成: 500 行",
+      "current": 33,
+      "total": 80,
+      "percent": 41
+    },
+    {
+      "time": "2026-11-09T17:24:33+08:00",
+      "event": "fetch",
+      "message": "抓取 600519 历史行情",
+      "current": 33,
+      "total": 80,
+      "percent": 41
+    },
+    {
+      "time": "2026-11-09T17:24:34+08:00",
+      "event": "fetch",
+      "message": "600519 完成: 500 行",
+      "current": 34,
+      "total": 80,
+      "percent": 42
+    },
+    {
+      "time": "2026-11-09T17:24:34+08:00",
+      "event": "fetch",
+      "message": "抓取 688041 历史行情",
+      "current": 34,
+      "total": 80,
+      "percent": 42
+    },
+    {
+      "time": "2026-11-09T17:24:34+08:00",
+      "event": "fetch",
+      "message": "688041 完成: 500 行",
+      "current": 35,
+      "total": 80,
+      "percent": 44
+    },
+    {
+      "time": "2026-11-09T17:24:34+08:00",
+      "event": "fetch",
+      "message": "抓取 600176 历史行情",
+      "current": 35,
+      "total": 80,
+      "percent": 44
+    },
+    {
+      "time": "2026-11-09T17:24:35+08:00",
+      "event": "fetch",
+      "message": "600176 完成: 500 行",
+      "current": 36,
+      "total": 80,
+      "percent": 45
+    },
+    {
+      "time": "2026-11-09T17:24:35+08:00",
+      "event": "fetch",
+      "message": "抓取 002475 历史行情",
+      "current": 36,
+      "total": 80,
+      "percent": 45
+    },
+    {
+      "time": "2026-11-09T17:24:35+08:00",
+      "event": "fetch",
+      "message": "002475 完成: 500 行",
+      "current": 37,
+      "total": 80,
+      "percent": 46
+    },
+    {
+      "time": "2026-11-09T17:24:35+08:00",
+      "event": "fetch",
+      "message": "抓取 603228 历史行情",
+      "current": 37,
+      "total": 80,
+      "percent": 46
+    },
+    {
+      "time": "2026-11-09T17:24:36+08:00",
+      "event": "fetch",
+      "message": "603228 完成: 500 行",
+      "current": 38,
+      "total": 80,
+      "percent": 48
+    },
+    {
+      "time": "2026-11-09T17:24:36+08:00",
+      "event": "fetch",
+      "message": "抓取 688585 历史行情",
+      "current": 38,
+      "total": 80,
+      "percent": 48
+    },
+    {
+      "time": "2026-11-09T17:24:36+08:00",
+      "event": "fetch",
+      "message": "688585 完成: 500 行",
+      "current": 39,
+      "total": 80,
+      "percent": 49
+    },
+    {
+      "time": "2026-11-09T17:24:36+08:00",
+      "event": "fetch",
+      "message": "抓取 601869 历史行情",
+      "current": 39,
+      "total": 80,
+      "percent": 49
+    },
+    {
+      "time": "2026-11-09T17:24:37+08:00",
+      "event": "fetch",
+      "message": "601869 完成: 500 行",
+      "current": 40,
+      "total": 80,
+      "percent": 50
+    },
+    {
+      "time": "2026-11-09T17:24:37+08:00",
+      "event": "fetch",
+      "message": "抓取 300014 历史行情",
+      "current": 40,
+      "total": 80,
+      "percent": 50
+    },
+    {
+      "time": "2026-11-09T17:24:37+08:00",
+      "event": "fetch",
+      "message": "300014 完成: 500 行",
+      "current": 41,
+      "total": 80,
+      "percent": 51
+    },
+    {
+      "time": "2026-11-09T17:24:37+08:00",
+      "event": "fetch",
+      "message": "抓取 002086 历史行情",
+      "current": 41,
+      "total": 80,
+      "percent": 51
+    },
+    {
+      "time": "2026-11-09T17:24:37+08:00",
+      "event": "fetch",
+      "message": "002086 完成: 500 行",
+      "current": 42,
+      "total": 80,
+      "percent": 52
+    },
+    {
+      "time": "2026-11-09T17:24:37+08:00",
+      "event": "fetch",
+      "message": "抓取 300408 历史行情",
+      "current": 42,
+      "total": 80,
+      "percent": 52
+    },
+    {
+      "time": "2026-11-09T17:24:38+08:00",
+      "event": "fetch",
+      "message": "300408 完成: 500 行",
+      "current": 43,
+      "total": 80,
+      "percent": 54
+    },
+    {
+      "time": "2026-11-09T17:24:38+08:00",
+      "event": "fetch",
+      "message": "抓取 300433 历史行情",
+      "current": 43,
+      "total": 80,
+      "percent": 54
+    },
+    {
+      "time": "2026-11-09T17:24:38+08:00",
+      "event": "fetch",
+      "message": "300433 完成: 500 行",
+      "current": 44,
+      "total": 80,
+      "percent": 55
+    },
+    {
+      "time": "2026-11-09T17:24:38+08:00",
+      "event": "fetch",
+      "message": "抓取 002929 历史行情",
+      "current": 44,
+      "total": 80,
+      "percent": 55
+    },
+    {
+      "time": "2026-11-09T17:24:39+08:00",
+      "event": "fetch",
+      "message": "002929 完成: 500 行",
+      "current": 45,
+      "total": 80,
+      "percent": 56
+    },
+    {
+      "time": "2026-11-09T17:24:39+08:00",
+      "event": "fetch",
+      "message": "抓取 603893 历史行情",
+      "current": 45,
+      "total": 80,
+      "percent": 56
+    },
+    {
+      "time": "2026-11-09T17:24:39+08:00",
+      "event": "fetch",
+      "message": "603893 完成: 500 行",
+      "current": 46,
+      "total": 80,
+      "percent": 57
+    },
+    {
+      "time": "2026-11-09T17:24:39+08:00",
+      "event": "fetch",
+      "message": "抓取 601398 历史行情",
+      "current": 46,
+      "total": 80,
+      "percent": 57
+    },
+    {
+      "time": "2026-11-09T17:24:40+08:00",
+      "event": "fetch",
+      "message": "601398 完成: 500 行",
+      "current": 47,
+      "total": 80,
+      "percent": 59
+    },
+    {
+      "time": "2026-11-09T17:24:40+08:00",
+      "event": "fetch",
+      "message": "抓取 301171 历史行情",
+      "current": 47,
+      "total": 80,
+      "percent": 59
+    },
+    {
+      "time": "2026-11-09T17:24:40+08:00",
+      "event": "fetch",
+      "message": "301171 完成: 500 行",
+      "current": 48,
+      "total": 80,
+      "percent": 60
+    },
+    {
+      "time": "2026-11-09T17:24:40+08:00",
+      "event": "fetch",
+      "message": "抓取 600036 历史行情",
+      "current": 48,
+      "total": 80,
+      "percent": 60
+    },
+    {
+      "time": "2026-11-09T17:24:40+08:00",
+      "event": "fetch",
+      "message": "600036 完成: 500 行",
+      "current": 49,
+      "total": 80,
+      "percent": 61
+    },
+    {
+      "time": "2026-11-09T17:24:40+08:00",
+      "event": "fetch",
+      "message": "抓取 600206 历史行情",
+      "current": 49,
+      "total": 80,
+      "percent": 61
+    },
+    {
+      "time": "2026-11-09T17:24:41+08:00",
+      "event": "fetch",
+      "message": "600206 完成: 500 行",
+      "current": 50,
+      "total": 80,
+      "percent": 62
+    },
+    {
+      "time": "2026-11-09T17:24:41+08:00",
+      "event": "fetch",
+      "message": "抓取 600498 历史行情",
+      "current": 50,
+      "total": 80,
+      "percent": 62
+    },
+    {
+      "time": "2026-11-09T17:24:41+08:00",
+      "event": "fetch",
+      "message": "600498 完成: 500 行",
+      "current": 51,
+      "total": 80,
+      "percent": 64
+    },
+    {
+      "time": "2026-11-09T17:24:41+08:00",
+      "event": "fetch",
+      "message": "抓取 000725 历史行情",
+      "current": 51,
+      "total": 80,
+      "percent": 64
+    },
+    {
+      "time": "2026-11-09T17:24:42+08:00",
+      "event": "fetch",
+      "message": "000725 完成: 500 行",
+      "current": 52,
+      "total": 80,
+      "percent": 65
+    },
+    {
+      "time": "2026-11-09T17:24:42+08:00",
+      "event": "fetch",
+      "message": "抓取 300857 历史行情",
+      "current": 52,
+      "total": 80,
+      "percent": 65
+    },
+    {
+      "time": "2026-11-09T17:24:42+08:00",
+      "event": "fetch",
+      "message": "300857 完成: 500 行",
+      "current": 53,
+      "total": 80,
+      "percent": 66
+    },
+    {
+      "time": "2026-11-09T17:24:42+08:00",
+      "event": "fetch",
+      "message": "抓取 603083 历史行情",
+      "current": 53,
+      "total": 80,
+      "percent": 66
+    },
+    {
+      "time": "2026-11-09T17:24:42+08:00",
+      "event": "fetch",
+      "message": "603083 完成: 500 行",
+      "current": 54,
+      "total": 80,
+      "percent": 68
+    },
+    {
+      "time": "2026-11-09T17:24:42+08:00",
+      "event": "fetch",
+      "message": "抓取 600522 历史行情",
+      "current": 54,
+      "total": 80,
+      "percent": 68
+    },
+    {
+      "time": "2026-11-09T17:24:43+08:00",
+      "event": "fetch",
+      "message": "600522 完成: 500 行",
+      "current": 55,
+      "total": 80,
+      "percent": 69
+    },
+    {
+      "time": "2026-11-09T17:24:43+08:00",
+      "event": "fetch",
+      "message": "抓取 002436 历史行情",
+      "current": 55,
+      "total": 80,
+      "percent": 69
+    },
+    {
+      "time": "2026-11-09T17:24:43+08:00",
+      "event": "fetch",
+      "message": "002436 完成: 500 行",
+      "current": 56,
+      "total": 80,
+      "percent": 70
+    },
+    {
+      "time": "2026-11-09T17:24:43+08:00",
+      "event": "fetch",
+      "message": "抓取 300118 历史行情",
+      "current": 56,
+      "total": 80,
+      "percent": 70
+    },
+    {
+      "time": "2026-11-09T17:24:44+08:00",
+      "event": "fetch",
+      "message": "300118 完成: 500 行",
+      "current": 57,
+      "total": 80,
+      "percent": 71
+    },
+    {
+      "time": "2026-11-09T17:24:44+08:00",
+      "event": "fetch",
+      "message": "抓取 002639 历史行情",
+      "current": 57,
+      "total": 80,
+      "percent": 71
+    },
+    {
+      "time": "2026-11-09T17:24:44+08:00",
+      "event": "fetch",
+      "message": "002639 完成: 500 行",
+      "current": 58,
+      "total": 80,
+      "percent": 72
+    },
+    {
+      "time": "2026-11-09T17:24:44+08:00",
+      "event": "fetch",
+      "message": "抓取 002241 历史行情",
+      "current": 58,
+      "total": 80,
+      "percent": 72
+    },
+    {
+      "time": "2026-11-09T17:24:45+08:00",
+      "event": "fetch",
+      "message": "002241 完成: 500 行",
+      "current": 59,
+      "total": 80,
+      "percent": 74
+    },
+    {
+      "time": "2026-11-09T17:24:45+08:00",
+      "event": "fetch",
+      "message": "抓取 300751 历史行情",
+      "current": 59,
+      "total": 80,
+      "percent": 74
+    },
+    {
+      "time": "2026-11-09T17:24:45+08:00",
+      "event": "fetch",
+      "message": "300751 完成: 500 行",
+      "current": 60,
+      "total": 80,
+      "percent": 75
+    },
+    {
+      "time": "2026-11-09T17:24:45+08:00",
+      "event": "fetch",
+      "message": "抓取 002865 历史行情",
+      "current": 60,
+      "total": 80,
+      "percent": 75
+    },
+    {
+      "time": "2026-11-09T17:24:45+08:00",
+      "event": "fetch",
+      "message": "002865 完成: 500 行",
+      "current": 61,
+      "total": 80,
+      "percent": 76
+    },
+    {
+      "time": "2026-11-09T17:24:45+08:00",
+      "event": "fetch",
+      "message": "抓取 688072 历史行情",
+      "current": 61,
+      "total": 80,
+      "percent": 76
+    },
+    {
+      "time": "2026-11-09T17:24:46+08:00",
+      "event": "fetch",
+      "message": "688072 完成: 500 行",
+      "current": 62,
+      "total": 80,
+      "percent": 78
+    },
+    {
+      "time": "2026-11-09T17:24:46+08:00",
+      "event": "fetch",
+      "message": "抓取 688361 历史行情",
+      "current": 62,
+      "total": 80,
+      "percent": 78
+    },
+    {
+      "time": "2026-11-09T17:24:46+08:00",
+      "event": "fetch",
+      "message": "688361 完成: 500 行",
+      "current": 63,
+      "total": 80,
+      "percent": 79
+    },
+    {
+      "time": "2026-11-09T17:24:46+08:00",
+      "event": "fetch",
+      "message": "抓取 601599 历史行情",
+      "current": 63,
+      "total": 80,
+      "percent": 79
+    },
+    {
+      "time": "2026-11-09T17:24:47+08:00",
+      "event": "fetch",
+      "message": "601599 完成: 500 行",
+      "current": 64,
+      "total": 80,
+      "percent": 80
+    },
+    {
+      "time": "2026-11-09T17:24:47+08:00",
+      "event": "fetch",
+      "message": "抓取 300006 历史行情",
+      "current": 64,
+      "total": 80,
+      "percent": 80
+    },
+    {
+      "time": "2026-11-09T17:24:47+08:00",
+      "event": "fetch",
+      "message": "300006 完成: 500 行",
+      "current": 65,
+      "total": 80,
+      "percent": 81
+    },
+    {
+      "time": "2026-11-09T17:24:47+08:00",
+      "event": "fetch",
+      "message": "抓取 002281 历史行情",
+      "current": 65,
+      "total": 80,
+      "percent": 81
+    },
+    {
+      "time": "2026-11-09T17:24:48+08:00",
+      "event": "fetch",
+      "message": "002281 完成: 500 行",
+      "current": 66,
+      "total": 80,
+      "percent": 82
+    },
+    {
+      "time": "2026-11-09T17:24:48+08:00",
+      "event": "fetch",
+      "message": "抓取 300666 历史行情",
+      "current": 66,
+      "total": 80,
+      "percent": 82
+    },
+    {
+      "time": "2026-11-09T17:24:48+08:00",
+      "event": "fetch",
+      "message": "300666 完成: 500 行",
+      "current": 67,
+      "total": 80,
+      "percent": 84
+    },
+    {
+      "time": "2026-11-09T17:24:48+08:00",
+      "event": "fetch",
+      "message": "抓取 301313 历史行情",
+      "current": 67,
+      "total": 80,
+      "percent": 84
+    },
+    {
+      "time": "2026-11-09T17:24:48+08:00",
+      "event": "fetch",
+      "message": "301313 完成: 500 行",
+      "current": 68,
+      "total": 80,
+      "percent": 85
+    },
+    {
+      "time": "2026-11-09T17:24:48+08:00",
+      "event": "fetch",
+      "message": "抓取 600900 历史行情",
+      "current": 68,
+      "total": 80,
+      "percent": 85
+    },
+    {
+      "time": "2026-11-09T17:24:49+08:00",
+      "event": "fetch",
+      "message": "600900 完成: 500 行",
+      "current": 69,
+      "total": 80,
+      "percent": 86
+    },
+    {
+      "time": "2026-11-09T17:24:49+08:00",
+      "event": "fetch",
+      "message": "抓取 002156 历史行情",
+      "current": 69,
+      "total": 80,
+      "percent": 86
+    },
+    {
+      "time": "2026-11-09T17:24:49+08:00",
+      "event": "fetch",
+      "message": "002156 完成: 500 行",
+      "current": 70,
+      "total": 80,
+      "percent": 88
+    },
+    {
+      "time": "2026-11-09T17:24:49+08:00",
+      "event": "fetch",
+      "message": "抓取 300604 历史行情",
+      "current": 70,
+      "total": 80,
+      "percent": 88
+    },
+    {
+      "time": "2026-11-09T17:24:50+08:00",
+      "event": "fetch",
+      "message": "300604 完成: 500 行",
+      "current": 71,
+      "total": 80,
+      "percent": 89
+    },
+    {
+      "time": "2026-11-09T17:24:50+08:00",
+      "event": "fetch",
+      "message": "抓取 688017 历史行情",
+      "current": 71,
+      "total": 80,
+      "percent": 89
+    },
+    {
+      "time": "2026-11-09T17:24:50+08:00",
+      "event": "fetch",
+      "message": "688017 完成: 500 行",
+      "current": 72,
+      "total": 80,
+      "percent": 90
+    },
+    {
+      "time": "2026-11-09T17:24:50+08:00",
+      "event": "fetch",
+      "message": "抓取 600584 历史行情",
+      "current": 72,
+      "total": 80,
+      "percent": 90
+    },
+    {
+      "time": "2026-11-09T17:24:51+08:00",
+      "event": "fetch",
+      "message": "600584 完成: 500 行",
+      "current": 73,
+      "total": 80,
+      "percent": 91
+    },
+    {
+      "time": "2026-11-09T17:24:51+08:00",
+      "event": "fetch",
+      "message": "抓取 600276 历史行情",
+      "current": 73,
+      "total": 80,
+      "percent": 91
+    },
+    {
+      "time": "2026-11-09T17:24:51+08:00",
+      "event": "fetch",
+      "message": "600276 完成: 500 行",
+      "current": 74,
+      "total": 80,
+      "percent": 92
+    },
+    {
+      "time": "2026-11-09T17:24:51+08:00",
+      "event": "fetch",
+      "message": "抓取 000338 历史行情",
+      "current": 74,
+      "total": 80,
+      "percent": 92
+    },
+    {
+      "time": "2026-11-09T17:24:52+08:00",
+      "event": "fetch",
+      "message": "000338 完成: 500 行",
+      "current": 75,
+      "total": 80,
+      "percent": 94
+    },
+    {
+      "time": "2026-11-09T17:24:52+08:00",
+      "event": "fetch",
+      "message": "抓取 603186 历史行情",
+      "current": 75,
+      "total": 80,
+      "percent": 94
+    },
+    {
+      "time": "2026-11-09T17:24:52+08:00",
+      "event": "fetch",
+      "message": "603186 完成: 500 行",
+      "current": 76,
+      "total": 80,
+      "percent": 95
+    },
+    {
+      "time": "2026-11-09T17:24:52+08:00",
+      "event": "fetch",
+      "message": "抓取 002916 历史行情",
+      "current": 76,
+      "total": 80,
+      "percent": 95
+    },
+    {
+      "time": "2026-11-09T17:24:53+08:00",
+      "event": "fetch",
+      "message": "002916 完成: 500 行",
+      "current": 77,
+      "total": 80,
+      "percent": 96
+    },
+    {
+      "time": "2026-11-09T17:24:53+08:00",
+      "event": "fetch",
+      "message": "抓取 002353 历史行情",
+      "current": 77,
+      "total": 80,
+      "percent": 96
+    },
+    {
+      "time": "2026-11-09T17:24:53+08:00",
+      "event": "fetch",
+      "message": "002353 完成: 500 行",
+      "current": 78,
+      "total": 80,
+      "percent": 98
+    },
+    {
+      "time": "2026-11-09T17:24:53+08:00",
+      "event": "fetch",
+      "message": "抓取 600127 历史行情",
+      "current": 78,
+      "total": 80,
+      "percent": 98
+    },
+    {
+      "time": "2026-11-09T17:24:54+08:00",
+      "event": "fetch",
+      "message": "600127 完成: 500 行",
+      "current": 79,
+      "total": 80,
+      "percent": 99
+    },
+    {
+      "time": "2026-11-09T17:24:54+08:00",
+      "event": "fetch",
+      "message": "抓取 300115 历史行情",
+      "current": 79,
+      "total": 80,
+      "percent": 99
+    },
+    {
+      "time": "2026-11-09T17:24:54+08:00",
+      "event": "fetch",
+      "message": "300115 完成: 500 行",
+      "current": 80,
+      "total": 80,
+      "percent": 100
+    }
+  ]
+}

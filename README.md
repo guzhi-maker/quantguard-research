@@ -1,3 +1,81 @@
+# QuantGuard 数据采集智能体
+
+当前小组任务聚焦成员 A 的交付：**发现公开数据源、调用真实行情接口、由 DeepSeek 智能体自主选择工具、保存可追溯的原始数据快照**。本阶段不负责后续特征工程、模型训练、组合优化和研究报告。
+
+```text
+自然语言任务 -> DeepSeek 工具规划 -> 公开接口探测
+-> 股票池/行情/日线抓取 -> 原始 CSV -> manifest + SHA256 -> 交接
+```
+
+## 当前版本如何启动
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe main.py web --port 8787
+```
+
+浏览器打开 `http://127.0.0.1:8787/`。默认页面是“数据采集工作台”，包含 DeepSeek 任务、固定流程采集、数据源探测、任务轨迹、采集记录和原始 CSV 浏览。
+
+将 `.env.example` 复制为本地 `.env` 并填写：
+
+```dotenv
+DEEPSEEK_API_KEY=your-deepseek-key-here
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+`.env` 已被 Git 忽略。未配置密钥时，固定流程采集仍可使用；智能体入口会明确报告未配置，不会用规则逻辑冒充 DeepSeek。
+
+## 数据采集交付物
+
+每次采集写入独立编号，不覆盖历史快照：
+
+```text
+data/raw/<run_id>/market_daily.csv
+data/raw/<run_id>/market_quotes.csv
+data/raw/<run_id>/universe.csv
+data/manifests/<run_id>.json
+```
+
+manifest 记录请求参数、来源、复权口径、行情起止日期、行数、失败股票、文件 SHA256、质量计数和智能体工具调用轨迹。原始文件只追加，不覆盖；发现问题应重新抓取或由 B 建立新的治理版本。
+
+## 数据源与约束
+
+- 东方财富：股票池、证券搜索、实时行情、历史前复权日线。
+- 腾讯证券：实时行情和历史日线回退。
+- 新浪财经：股票池和历史日线回退。
+- 腾讯、新浪成交额可能是按成交量与价格估算；每行 `source` 会明确标注。
+- 新浪复权口径无法稳定确认时标记为 `unverified`，交由数据治理阶段复核。
+- 当前股票池是抓取时点的流动性快照，不是历史成分股。
+
+## 采集 API
+
+- `GET /api/overview`：智能体状态、数据源注册表和最近快照。
+- `POST /api/sources/probe`：真实探测公开数据源。
+- `POST /api/search`：按代码或名称搜索证券。
+- `POST /api/jobs`：创建 `agent` 或 `fixed` 采集任务。
+- `GET /api/jobs/{job_id}`：读取进度、事件和结果。
+- `GET /api/runs/{run_id}`：读取 manifest。
+- `GET /api/runs/{run_id}/rows?view=daily`：分页浏览原始数据。
+- `GET /api/runs/{run_id}/csv?view=daily`：导出完整 CSV。
+
+## 测试
+
+```powershell
+$env:PYTHONPATH=(Resolve-Path '.pytest-deps').Path
+$env:LOKY_MAX_CPU_COUNT='1'
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+采集模块测试覆盖参数校验、原始 CSV、manifest、SHA256、来源血缘、分页、DeepSeek 工具循环和 HTTP API。
+
+架构、答辩讲解和三分钟演示流程见 [数据采集工作台说明](docs/data-agent-workbench.md)。
+
+---
+
+以下内容保留作为后续研究模块说明。该模块不属于成员 A 当前交付，也不是本轮默认页面。
+
 # QuantGuard 机器学习量化研究台
 
 面向数据挖掘与机器学习课程期末项目的本地量化研究应用。它把一次 A 股横截面研究拆成可检查的完整链路：
@@ -20,16 +98,16 @@ cd C:\Users\25187\Desktop\量化
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 
-# 启动研究台
-.\.venv\Scripts\python.exe main.py web --port 8787
+# 启动旧研究台（非成员 A 当前交付）
+.\.venv\Scripts\python.exe main.py research-web --port 8788
 ```
 
-浏览器打开 `http://127.0.0.1:8787/`。页面自动从公开证券行情接口运行一组 `80 只股票 x 500 个交易日` 的真实行情研究，并在研究完成前显示实时抓取状态。
+浏览器打开 `http://127.0.0.1:8788/`。旧研究台会从公开证券行情接口运行一组 `80 只股票 x 500 个交易日` 的行情研究，不属于成员 A 当前交付。
 
 如果本机已有可用的虚拟环境，也可以直接启动：
 
 ```powershell
-C:\Users\25187\Desktop\因果低秩适配\venv\Scripts\python.exe main.py web --port 8787
+.\.venv\Scripts\python.exe main.py research-web --port 8788
 ```
 
 ## 当前能力
@@ -150,7 +228,7 @@ C:\Users\25187\Desktop\因果低秩适配\venv\Scripts\python.exe main.py web --
 ```powershell
 $env:PYTHONPATH=(Resolve-Path '.pytest-deps').Path
 $env:LOKY_MAX_CPU_COUNT='1'
-C:\Users\25187\Desktop\因果低秩适配\venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
 当前自动化测试覆盖数据清洗、因子时点、标签隔离、模型对照、成本可加性、整手执行、容量压力、API、组合风控和图表数据契约。
