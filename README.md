@@ -27,6 +27,7 @@
 - **14 项可解释指标**：每项都展示当前值、公式与输入、衡量含义、后续建模用法和证据来源。
 - **资讯与风险提醒**：检索近 30 天新闻和公司公告，用风险词典标记待核验线索；标题不能被模型外推为确定结论。
 - **建模交接**：明确未来 5/20 日收益标签、时间切分、泄漏检查、IC/RankIC、分层回测、组合约束和成本敏感性。
+- **覆盖度审计与列式导出**：记录快照交易日、每股历史长度、首末日期和区间缺口，并生成按年分区的 Parquet 与 DuckDB；原始 CSV 保持不变，可随时重建复核。
 
 ## 快速开始
 
@@ -89,6 +90,39 @@ data/manifests/<run_id>.json
 .\.venv\Scripts\python.exe tools\verify_snapshot.py RAW-20261110-225213-E359DC
 ```
 
+## 研究派生层
+
+原始 CSV 是唯一证据，派生层用于审计覆盖度并加速后续建模。派生文件写入 `data/derived/<run_id>/`，不覆盖 `data/raw/`、manifest 或任何原始 SHA256。
+
+当前快照的派生层结果：
+
+```text
+快照交易日并集: 1,045
+每股记录中位数: 1,000
+达到请求 1,000 日: 2,676 只
+少于 950 日: 267 只（主要是上市较晚）
+生命周期完整度: 99.885%
+内部存在会话缺口: 454 只，合计 3,303 个会话
+Parquet 行数: 2,868,954（按自然年分区）
+```
+
+缺口只表示股票首末记录之间缺少行情行，可能来自停牌或接口缺行，不等同于采集失败；采集失败仍以 manifest 的 `failures` 为准。
+
+生成或重建：
+
+```powershell
+.\.venv\Scripts\python.exe tools\build_research_exports.py RAW-20261110-225213-E359DC
+.\.venv\Scripts\python.exe tools\build_research_exports.py RAW-20261110-225213-E359DC --rebuild
+```
+
+打包给成员 B/C 的研究交接 ZIP（含覆盖度、Parquet、DuckDB、原始 manifest 和文档，不含原始 CSV）：
+
+```powershell
+.\.venv\Scripts\python.exe tools\package_research_exports.py RAW-20261110-225213-E359DC
+```
+
+目录结构、覆盖度口径、示例 SQL 和派生文件哈希见 [研究派生层与覆盖度审计](docs/research-exports.md)。
+
 ## 个股研究报告
 
 “股票风险体检”默认用 `600519,300750,601318` 作为课堂示例。每次报告都会重新抓取真实行情，并把结果保存为独立 `AUDIT-*` 文件。
@@ -142,6 +176,10 @@ manifest 记录请求参数、来源、复权口径、行数、日期范围、�
 - `GET /api/runs/{run_id}`：读取完整 manifest。
 - `GET /api/runs/{run_id}/rows?view=daily`：分页浏览日线、行情或股票池。
 - `GET /api/runs/{run_id}/csv?view=daily`：导出完整 CSV。
+- `GET /api/runs/{run_id}/coverage`：读取覆盖度审计摘要、年度分布和缺口说明。
+- `GET /api/runs/{run_id}/derived`：读取 Parquet、DuckDB 与派生层 manifest。
+- `GET /api/runs/{run_id}/derived-file?path=...`：下载指定派生文件。
+- `POST /api/runs/{run_id}/exports`：生成派生层，可传 `{"rebuild": true}` 重建。
 - `POST /api/jobs`：创建 `fixed` 数据池采集、`agent` 智能体采集或 `risk` 研究报告任务。
 - `GET /api/jobs/{job_id}`：读取进度、事件和结果。
 - `GET /api/audits`：列出历史研究报告。
@@ -155,16 +193,23 @@ data_agent/
 ├── catalog.py           # 数据源注册表
 ├── collect_dataset.py   # 三千股断点续采 CLI
 ├── news_client.py       # 新闻与公告检索
+├── research_exports.py  # 覆盖度审计、Parquet 与 DuckDB 派生层
 ├── risk.py              # 指标、核价、规则预警与研究链
 ├── risk_service.py      # 个股研究报告流水线
 ├── service.py           # 固定/智能采集任务编排
 ├── store.py             # CSV、manifest、哈希和分页读取
 ├── server.py            # 本地 HTTP API
 └── static/              # 研究数据台前端
+tools/
+├── build_research_exports.py    # 生成覆盖度与列式导出
+├── package_research_exports.py  # 打包课程交接 ZIP
+└── verify_snapshot.py           # 独立复核原始快照
 webapp/
 ├── market_client.py     # 东方财富、腾讯、新浪真实行情连接器
 └── ...
 docs/
+├── dataset-card.md
+├── research-exports.md
 └── data-agent-workbench.md
 tests/
 ```
@@ -181,6 +226,8 @@ node tools\check_layout.mjs
 ```
 
 测试覆盖参数校验、原始 CSV、manifest、SHA256、来源血缘、分页、DeepSeek 工具循环、双源核价、14 项指标解释、六步研究链、新闻失败记录和 HTTP API。
+
+派生层另包含覆盖度分布、Parquet 行数、DuckDB 可读性和交接 ZIP 内容测试。
 
 ## 研究边界
 

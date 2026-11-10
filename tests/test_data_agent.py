@@ -2,14 +2,19 @@ from __future__ import annotations
 
 import json
 import threading
+import zipfile
+from pathlib import Path
 from urllib.request import Request, urlopen
 
 import pytest
+import pyarrow.parquet as pq
 
 from data_agent.agent import DeepSeekAgent, DeepSeekClient
+from data_agent.research_exports import build_research_exports
 from data_agent.server import create_server
 from data_agent.service import CollectorService, CollectionRequest
 from data_agent.store import RawRunStore
+from tools.package_research_exports import build_research_bundle
 from webapp import market_client
 
 
@@ -65,7 +70,11 @@ def make_service(tmp_path):
         raw_dir=tmp_path / "raw",
         manifest_dir=tmp_path / "manifests",
     )
-    return CollectorService(store=store, gateway=FakeGateway())
+    return CollectorService(
+        store=store,
+        gateway=FakeGateway(),
+        derived_dir=tmp_path / "derived",
+    )
 
 
 def test_collection_request_validation():
@@ -299,6 +308,78 @@ def test_agent_rejects_malformed_tool_arguments_without_collecting(tmp_path):
 
     assert service.store.list_runs() == []
 
+
+def test_research_exports_build_coverage_parquet_and_manifest(tmp_path):
+    service = make_service(tmp_path)
+    result = service.collect(
+        CollectionRequest(universe_size=12, history_days=30)
+    )
+    run_id = result["run_id"]
+    exported = build_research_exports(
+        run_id,
+        store=service.store,
+        derived_dir=tmp_path / "derived",
+    )
+
+    assert exported["coverage"]["summary"]["trading_sessions"] == 9
+    assert exported["coverage"]["summary"]["symbols"] == 12
+    assert exported["coverage"]["summary"]["lifetime_completeness"] == 1.0
+    assert exported["parquet"]["daily_rows"] == 108
+    coverage_dir = tmp_path / "derived" / run_id
+    assert (coverage_dir / "coverage_by_symbol.csv").is_file()
+    parquet_files = list(
+        (coverage_dir / "parquet" / "market_daily").rglob("*.parquet")
+    )
+    assert len(parquet_files) == 1
+    assert pq.read_table(parquet_files[0]).num_rows == 108
+    assert (coverage_dir / "export_manifest.json").is_file()
+    cached = build_research_exports(
+        run_id,
+        store=service.store,
+        derived_dir=tmp_path / "derived",
+    )
+    assert cached["generated_at"] == exported["generated_at"]
+    rebuilt = build_research_exports(
+        run_id,
+        store=service.store,
+        derived_dir=tmp_path / "derived",
+        rebuild=True,
+    )
+    assert rebuilt["parquet"]["daily_rows"] == 108
+
+
+def test_research_bundle_packages_docs_and_derived_files(tmp_path):
+    service = make_service(tmp_path)
+    result = service.collect(
+        CollectionRequest(universe_size=12, history_days=30)
+    )
+    run_id = result["run_id"]
+    build_research_exports(
+        run_id,
+        store=service.store,
+        derived_dir=tmp_path / "derived",
+    )
+    bundle = build_research_bundle(
+        run_id,
+        store=service.store,
+        derived_dir=tmp_path / "derived",
+        exports_dir=tmp_path / "exports",
+    )
+    assert bundle["parquet_rows"] == 108
+    assert bundle["duckdb"] in {"ready", "unavailable"}
+    archive_path = Path(bundle["path"])
+    assert archive_path.is_file()
+    assert archive_path.with_suffix(".zip.sha256").is_file()
+    with zipfile.ZipFile(archive_path) as archive:
+        names = set(archive.namelist())
+    prefix = f"RESEARCH-{run_id}"
+    assert f"{prefix}/README.md" in names
+    assert f"{prefix}/coverage_by_symbol.csv" in names
+    assert f"{prefix}/raw_manifest.json" in names
+    assert f"{prefix}/docs/dataset-card.md" in names
+    assert any(name.endswith(".parquet") for name in names)
+
+
 def test_collector_server_api_and_static_page(tmp_path):
     service = make_service(tmp_path)
     job = service.create_job(
@@ -312,6 +393,11 @@ def test_collector_server_api_and_static_page(tmp_path):
     )
     run_id = job["result"]["run_id"]
     server = create_server(service=service)
+    build_research_exports(
+        run_id,
+        store=service.store,
+        derived_dir=tmp_path / "derived",
+    )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base = f"http://127.0.0.1:{server.server_port}"
@@ -334,6 +420,32 @@ def test_collector_server_api_and_static_page(tmp_path):
         assert payload["total"] == 108
         assert len(payload["rows"]) == 3
 
+        with urlopen(f"{base}/api/runs/{run_id}/coverage", timeout=5) as response:
+            coverage = json.loads(response.read().decode("utf-8"))
+        assert coverage["summary"]["trading_sessions"] == 9
+
+        with urlopen(f"{base}/api/runs/{run_id}/derived", timeout=5) as response:
+            derived = json.loads(response.read().decode("utf-8"))
+        assert derived["parquet"]["daily_rows"] == 108
+
+        export_request = Request(
+            f"{base}/api/runs/{run_id}/exports",
+            data=b"{}",
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urlopen(export_request, timeout=10) as response:
+            export_result = json.loads(response.read().decode("utf-8"))
+        assert export_result["parquet_rows"] == 108
+
+        with urlopen(
+            f"{base}/api/runs/{run_id}/derived-file?path=coverage_by_symbol.csv",
+            timeout=5,
+        ) as response:
+            coverage_csv = response.read().decode("utf-8-sig")
+        assert "missing_sessions" in coverage_csv
+        assert "600001" in coverage_csv
+
         with urlopen(f"{base}/", timeout=5) as response:
             html = response.read().decode("utf-8")
         assert "股票风险体检" in html
@@ -345,6 +457,9 @@ def test_collector_server_api_and_static_page(tmp_path):
         assert 'id="researchChain"' in html
         assert 'id="indicatorTable"' in html
         assert 'id="universeSize"' in html
+        assert 'id="coverageBuckets"' in html
+        assert 'id="coverageYears"' in html
+        assert 'id="buildExportsButton"' in html
     finally:
         server.shutdown()
         server.server_close()

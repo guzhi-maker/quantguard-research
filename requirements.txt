@@ -5,6 +5,7 @@ matplotlib>=3.8
 scipy>=1.11
 scikit-learn>=1.4
 pyarrow>=14
+duckdb>=1.0
 
 # 行情数据源
 akshare>=1.12

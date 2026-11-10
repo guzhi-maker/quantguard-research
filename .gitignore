@@ -13,6 +13,7 @@ venv/
 # 数据与缓存（体积大且可再生成）
 data/cache/
 data/raw/
+data/derived/
 data/audits/
 data/manifests/*.tmp
 data/curated/

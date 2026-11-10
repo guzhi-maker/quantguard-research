@@ -75,6 +75,37 @@
         </div>
         <div id="datasetLinks" class="download-links"></div>
       </div>
+
+      <div class="coverage-panel" aria-labelledby="coverageTitle">
+        <header class="coverage-head">
+          <div>
+            <span class="eyebrow">COVERAGE AUDIT · 样本覆盖</span>
+            <h2 id="coverageTitle">历史覆盖与数据边界</h2>
+          </div>
+          <div class="coverage-actions">
+            <span id="coverageState" class="quiet-badge">读取中</span>
+            <button id="buildExportsButton" class="secondary-button" type="button" hidden>生成研究导出</button>
+          </div>
+        </header>
+        <div class="coverage-metrics">
+          <div><span>快照交易日</span><strong id="coverageSessions">—</strong></div>
+          <div><span>生命周期完整度</span><strong id="coverageCompleteness">—</strong></div>
+          <div><span>每股记录中位数</span><strong id="coverageMedianRows">—</strong></div>
+          <div><span>内部缺失会话</span><strong id="coverageMissingSessions">—</strong></div>
+        </div>
+        <div class="coverage-grid">
+          <div class="coverage-block">
+            <h3>股票历史长度分布</h3>
+            <div id="coverageBuckets" class="coverage-buckets"></div>
+          </div>
+          <div class="coverage-block">
+            <h3>年度面板覆盖</h3>
+            <div id="coverageYears" class="coverage-years"></div>
+          </div>
+        </div>
+        <div id="coverageIssues" class="coverage-issues"></div>
+        <div id="coverageLinks" class="download-links"></div>
+      </div>
     </section>
 
     <section class="intake" aria-labelledby="pageTitle">

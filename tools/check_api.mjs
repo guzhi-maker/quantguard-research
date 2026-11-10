@@ -13,6 +13,12 @@ const runs = await json("/api/runs?limit=5");
 const audits = await json("/api/audits?limit=5");
 const latestRun = runs.items?.[0];
 const latestAudit = audits.items?.[0];
+const latestCoverage = latestRun
+  ? await json(`/api/runs/${latestRun.run_id}/coverage`)
+  : null;
+const latestDerived = latestRun
+  ? await json(`/api/runs/${latestRun.run_id}/derived`)
+  : null;
 
 if (!latestRun) {
   throw new Error("No snapshot returned by /api/runs");
@@ -22,6 +28,24 @@ if (latestRun.summary?.symbols < 2800 || latestRun.summary?.daily_rows < 2800000
 }
 if ("symbols" in (latestRun.request || {})) {
   throw new Error("/api/runs still exposes the full symbol list");
+}
+if (!String(latestRun.summary?.date_min || "").startsWith("2022")) {
+  throw new Error("Latest snapshot does not include long-history coverage from 2022");
+}
+if (latestRun.summary?.failures !== 0) {
+  throw new Error("Latest snapshot has collection failures");
+}
+if (latestCoverage?.summary?.trading_sessions < 1000) {
+  throw new Error("Coverage report has too few snapshot trading sessions");
+}
+if (latestCoverage?.summary?.lifetime_completeness < 0.99) {
+  throw new Error("Coverage completeness is below the expected threshold");
+}
+if (latestDerived?.parquet?.daily_rows !== latestRun.summary.daily_rows) {
+  throw new Error("Parquet row count does not match the raw snapshot");
+}
+if (latestDerived?.duckdb?.status !== "ready") {
+  throw new Error("DuckDB research export is not ready");
 }
 for (const run of overview.recent_runs || []) {
   if ("trace" in run) throw new Error("/api/overview exposes trace");
@@ -48,6 +72,8 @@ for (const id of [
   "reportTitle",
   "researchChain",
   "indicatorTable",
+  "coverageBuckets",
+  "coverageYears",
   "researchDesign",
 ]) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing UI element ${id}`);
@@ -62,6 +88,10 @@ console.log(
       date_min: latestRun.summary.date_min,
       date_max: latestRun.summary.date_max,
       failures: latestRun.summary.failures,
+      coverage_sessions: latestCoverage.summary.trading_sessions,
+      coverage_completeness: latestCoverage.summary.lifetime_completeness,
+      parquet_rows: latestDerived.parquet.daily_rows,
+      duckdb_status: latestDerived.duckdb.status,
       latest_audit: latestAudit.audit_id,
       reports: assessments.length,
       indicators_per_stock: assessments.map((item) => item.indicator_details.length),
@@ -74,9 +104,3 @@ console.log(
     2,
   ),
 );
-if (!String(latestRun.summary?.date_min || "").startsWith("2022")) {
-  throw new Error("Latest snapshot does not include long-history coverage from 2022");
-}
-if (latestRun.summary?.failures !== 0) {
-  throw new Error("Latest snapshot has collection failures");
-}

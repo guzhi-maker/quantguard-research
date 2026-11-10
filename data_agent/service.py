@@ -6,9 +6,11 @@ import threading
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 from data_agent.catalog import get_source, get_source_catalog
+from config.settings import DATA_DIR
 from data_agent.store import CHINA_TZ, RawRunStore, now_iso
 from webapp import market_client
 
@@ -163,9 +165,11 @@ class CollectorService:
         store: RawRunStore | None = None,
         gateway: MarketGateway | None = None,
         agent_factory: Optional[Callable[["CollectorService"], Any]] = None,
+        derived_dir: Path | None = None,
     ):
         self.store = store or RawRunStore()
         self.gateway = gateway or MarketGateway()
+        self.derived_dir = Path(derived_dir or DATA_DIR / "derived")
         self.agent_factory = agent_factory
         self._jobs: dict[str, dict] = {}
         self._jobs_lock = threading.Lock()

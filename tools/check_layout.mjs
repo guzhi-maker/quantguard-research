@@ -92,6 +92,11 @@ async function collect(client, width, height) {
       poolSymbols: document.querySelector('#poolSymbolsCount')?.textContent,
       poolRows: document.querySelector('#poolRowsCount')?.textContent,
       poolDateRange: document.querySelector('#poolDateRange')?.textContent,
+      coverageState: document.querySelector('#coverageState')?.textContent,
+      coverageSessions: document.querySelector('#coverageSessions')?.textContent,
+      coverageCompleteness: document.querySelector('#coverageCompleteness')?.textContent,
+      coverageBuckets: document.querySelectorAll('.coverage-bar-row').length,
+      coverageYears: document.querySelectorAll('.coverage-year-row').length,
       reportTitle: document.querySelector('#reportTitle')?.textContent,
     })`,
   );
@@ -159,6 +164,12 @@ try {
     Number(desktop.poolSymbols.replaceAll(',', '')) < 2800 ||
     Number(desktop.poolRows.replaceAll(',', '')) < 2800000 ||
     !String(desktop.poolDateRange || '').includes('2022') ||
+    desktop.coverageState !== '审计完成' ||
+    desktop.coverageSessions !== '1,045' ||
+    desktop.coverageBuckets !== 5 ||
+    desktop.coverageYears !== 5 ||
+    mobile.coverageState !== '审计完成' ||
+    mobile.coverageBuckets !== 5 ||
     interaction.defaultPoolSize !== '3000' ||
     !interaction.poolOptions.includes('3000') ||
     !interaction.poolOptions.includes('5000') ||

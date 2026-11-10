@@ -1225,6 +1225,209 @@ select {
   line-height: 1.6;
 }
 
+.coverage-panel {
+  margin-top: 24px;
+  padding: 22px 0 18px;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.coverage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.coverage-head h2 {
+  margin: 6px 0 0;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.coverage-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secondary-button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.secondary-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.coverage-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.coverage-metrics > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 13px 16px;
+  border-right: 1px solid var(--line);
+}
+
+.coverage-metrics > div:first-child {
+  padding-left: 0;
+}
+
+.coverage-metrics > div:last-child {
+  border-right: 0;
+}
+
+.coverage-metrics span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.coverage-metrics strong {
+  overflow-wrap: anywhere;
+  font-family: Georgia, serif;
+  font-size: 21px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+  margin-top: 20px;
+}
+
+.coverage-block {
+  min-width: 0;
+}
+
+.coverage-block h3 {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.coverage-buckets,
+.coverage-years {
+  display: grid;
+  gap: 8px;
+}
+
+.coverage-bar-row {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) 46px;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  font-size: 11px;
+}
+
+.coverage-bar-label {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.coverage-bar-track,
+.coverage-year-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #e4e9e5;
+}
+
+.coverage-bar-fill,
+.coverage-year-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.coverage-bar-value {
+  text-align: right;
+  font-family: Consolas, monospace;
+  font-weight: 500;
+}
+
+.coverage-year-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 132px;
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  font-size: 11px;
+}
+
+.coverage-year-row strong {
+  font-family: Consolas, monospace;
+  font-weight: 500;
+}
+
+.coverage-year-row span {
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.coverage-issues {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 20px;
+  margin-top: 20px;
+}
+
+.coverage-issue-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+}
+
+.coverage-issue-row span {
+  color: var(--muted);
+}
+
+.coverage-issue-row strong {
+  font-family: Consolas, monospace;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.coverage-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.coverage-panel .download-links {
+  margin-top: 14px;
+}
+
 /* Stock research report */
 .report-section,
 .design-section {
@@ -1485,6 +1688,14 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .coverage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .coverage-issues {
+    grid-template-columns: 1fr;
+  }
+
   .pool-note {
     text-align: left;
   }
@@ -1505,6 +1716,35 @@ select {
 @media (max-width: 600px) {
   .pool-form {
     grid-template-columns: 1fr;
+  }
+
+  .coverage-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .coverage-metrics > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .coverage-metrics > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .coverage-metrics > div:nth-child(3) {
+    padding-left: 0;
+  }
+
+  .coverage-bar-row {
+    grid-template-columns: 78px minmax(0, 1fr) 40px;
+  }
+
+  .coverage-year-row {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .coverage-year-row span {
+    grid-column: 1 / -1;
+    text-align: left;
   }
 
   .intake h2 {

@@ -2,6 +2,8 @@ const state = {
   overview: null,
   audits: [],
   datasets: [],
+  coverageByRun: {},
+  exportsByRun: {},
   activeAudit: null,
   activeDatasetId: null,
   selectedSymbol: null,
@@ -176,6 +178,7 @@ function renderPool() {
     $("#poolDateRange").textContent = "—";
     $("#poolFailures").textContent = "—";
     info.append(node("span", "", "还没有本地快照，先采集一次数据池。"));
+    renderCoverage();
     return;
   }
 
@@ -231,12 +234,179 @@ function renderPool() {
   manifest.target = "_blank";
   manifest.rel = "noopener noreferrer";
   links.append(manifest);
+  renderCoverage();
 }
 
 async function loadDatasets() {
   const payload = await api("/api/runs?limit=20");
   state.datasets = payload.items || [];
   renderPool();
+  await loadDerived(currentDataset()?.run_id);
+}
+
+function appendDerivedLink(container, runId, label, path) {
+  if (!path) return;
+  const link = node("a", "text-link", label);
+  link.href = `/api/runs/${encodeURIComponent(runId)}/derived-file?path=${encodeURIComponent(path)}`;
+  container.append(link);
+}
+
+function renderCoverage() {
+  const runId = currentDataset()?.run_id;
+  const coverage = runId ? state.coverageByRun[runId] : null;
+  const derive = runId ? state.exportsByRun[runId] : null;
+  const stateBadge = $("#coverageState");
+  const buckets = $("#coverageBuckets");
+  const years = $("#coverageYears");
+  const issues = $("#coverageIssues");
+  const links = $("#coverageLinks");
+  const buildButton = $("#buildExportsButton");
+  clear(buckets);
+  clear(years);
+  clear(issues);
+  clear(links);
+  if (!coverage) {
+    buildButton.hidden = !runId;
+    stateBadge.textContent = runId ? "未生成派生层" : "暂无快照";
+    stateBadge.classList.add("is-warning");
+    ["#coverageSessions", "#coverageCompleteness", "#coverageMedianRows", "#coverageMissingSessions"].forEach((selector) => {
+      $(selector).textContent = "—";
+    });
+    issues.append(node("p", "coverage-note", "当前快照尚未生成覆盖度与列式研究导出。"));
+    return;
+  }
+  stateBadge.textContent = "审计完成";
+  buildButton.hidden = Boolean(derive);
+  stateBadge.classList.remove("is-warning");
+  const summary = coverage.summary || {};
+  const rows = summary.rows_per_symbol || {};
+  $("#coverageSessions").textContent = formatInteger(summary.trading_sessions);
+  $("#coverageCompleteness").textContent = summary.lifetime_completeness == null
+    ? "—"
+    : `${(Number(summary.lifetime_completeness) * 100).toFixed(2)}%`;
+  $("#coverageMedianRows").textContent = formatInteger(rows.median);
+  $("#coverageMissingSessions").textContent = formatInteger(summary.internal_missing_sessions);
+
+  const coverageBuckets = coverage.coverage_buckets || [];
+  const bucketMax = Math.max(1, ...coverageBuckets.map((item) => Number(item.symbols) || 0));
+  coverageBuckets.forEach((item) => {
+    const row = node("div", "coverage-bar-row");
+    const track = node("div", "coverage-bar-track");
+    const bar = node("div", "coverage-bar-fill");
+    bar.style.width = `${Math.max(1, ((Number(item.symbols) || 0) / bucketMax) * 100)}%`;
+    track.append(bar);
+    row.append(
+      node("span", "coverage-bar-label", `${item.bucket} 行`),
+      track,
+      node("strong", "coverage-bar-value", formatInteger(item.symbols)),
+    );
+    buckets.append(row);
+  });
+
+  const yearMax = Math.max(1, ...(coverage.by_year || []).map((item) => Number(item.daily_rows) || 0));
+  (coverage.by_year || []).forEach((item) => {
+    const row = node("div", "coverage-year-row");
+    const track = node("div", "coverage-year-track");
+    const bar = node("div", "coverage-year-fill");
+    bar.style.width = `${Math.max(1, ((Number(item.daily_rows) || 0) / yearMax) * 100)}%`;
+    track.append(bar);
+    row.append(
+      node("strong", "", item.year),
+      track,
+      node("span", "", `${formatInteger(item.trading_sessions)} 日 · ${formatInteger(item.daily_rows)} 行`),
+    );
+    years.append(row);
+  });
+
+  [
+    ["少于 950 个交易日", `${formatInteger(summary.symbols_below_950_rows)} 只`],
+    ["区间内存在会话缺口", `${formatInteger(summary.symbols_with_internal_gaps)} 只`],
+    ["达到请求历史长度", `${formatInteger(summary.symbols_meeting_requested_history)} 只`],
+  ].forEach(([label, value]) => {
+    const row = node("div", "coverage-issue-row");
+    row.append(node("span", "", label), node("strong", "", value));
+    issues.append(row);
+  });
+  (coverage.limitations || []).slice(0, 3).forEach((text) => {
+    issues.append(node("p", "coverage-note", text));
+  });
+
+  if (coverage.files) {
+    [[
+      "覆盖度明细 CSV", coverage.files.coverage_by_symbol?.path,
+    ], ["年度覆盖 CSV", coverage.files.coverage_by_year?.path], [
+      "覆盖度 JSON", coverage.files.coverage?.path,
+    ]].forEach(([label, path]) => appendDerivedLink(links, runId, label, path));
+  }
+  if (derive?.parquet) {
+    (derive.parquet.market_daily?.files || []).forEach((item) => {
+      appendDerivedLink(
+        links,
+        runId,
+        `${item.year} 日线 Parquet`,
+        `parquet/market_daily/${item.path}`,
+      );
+    });
+    appendDerivedLink(links, runId, "行情 Parquet", "parquet/market_quotes.parquet");
+    appendDerivedLink(links, runId, "股票池 Parquet", "parquet/universe.parquet");
+    if (derive.duckdb?.status === "ready") {
+      appendDerivedLink(links, runId, "DuckDB 数据库", derive.duckdb.path);
+    }
+  }
+}
+
+async function loadDerived(runId) {
+  const buildButton = $("#buildExportsButton");
+  buildButton.disabled = false;
+  buildButton.textContent = "生成研究导出";
+  if (!runId) {
+    renderCoverage();
+    return;
+  }
+  if (state.coverageByRun[runId] && state.exportsByRun[runId]) {
+    renderCoverage();
+    return;
+  }
+  $("#coverageState").textContent = "读取中";
+  const [coverageResult, exportResult] = await Promise.allSettled([
+    api(`/api/runs/${encodeURIComponent(runId)}/coverage`),
+    api(`/api/runs/${encodeURIComponent(runId)}/derived`),
+  ]);
+  if (coverageResult.status === "fulfilled") {
+    state.coverageByRun[runId] = coverageResult.value;
+  } else {
+    delete state.coverageByRun[runId];
+  }
+  if (exportResult.status === "fulfilled") {
+    state.exportsByRun[runId] = exportResult.value;
+  } else {
+    delete state.exportsByRun[runId];
+  }
+  if (currentDataset()?.run_id === runId) renderCoverage();
+}
+
+async function buildResearchExports() {
+  const runId = currentDataset()?.run_id;
+  if (!runId) return;
+  const button = $("#buildExportsButton");
+  button.disabled = true;
+  button.textContent = "生成中";
+  $("#coverageState").textContent = "正在生成";
+  try {
+    const result = await api(`/api/runs/${encodeURIComponent(runId)}/exports`, {
+      method: "POST",
+      body: JSON.stringify({ rebuild: false }),
+    });
+    delete state.coverageByRun[runId];
+    delete state.exportsByRun[runId];
+    await loadDerived(runId);
+    toast(`研究导出已生成：${formatInteger(result.parquet_rows)} 行`);
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "重新生成";
+    $("#coverageState").textContent = "生成失败";
+    toast(error.message, true);
+  }
 }
 
 async function submitCollection(event) {
@@ -807,7 +977,9 @@ async function init() {
   $("#datasetSelect").addEventListener("change", (event) => {
     state.activeDatasetId = event.target.value;
     renderPool();
+    loadDerived(state.activeDatasetId);
   });
+  $("#buildExportsButton").addEventListener("click", buildResearchExports);
   $$(".tab").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeTab = button.dataset.tab;

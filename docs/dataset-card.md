@@ -1,4 +1,4 @@
-# QuantGuard A 股三千股长周期研究数据集卡片 v1.2
+# QuantGuard A 股三千股长周期研究数据集卡片 v1.3
 
 ## 1. 数据集定位
 
@@ -42,9 +42,24 @@ data/manifests/
 data/audits/
 └── AUDIT-20261110-000919-14F9EE/
                            # 3 只样板的六步 AI 研究链与 14 项指标证据
+
+data/derived/RAW-20261110-225213-E359DC/
+├── coverage.json          # 覆盖度摘要、年度分布、缺口与限制
+├── coverage_by_symbol.csv # 全部股票的历史长度、首末日期和缺口
+├── coverage_by_year.csv   # 年度交易日数与记录数
+├── parquet/               # 按年分区日线、行情与股票池，zstd 压缩
+├── quantguard.duckdb      # 可直接 SQL 查询的数据库
+├── query_examples.sql     # 示例查询
+└── export_manifest.json   # 派生层文件清单与 SHA256
+
+exports/
+├── RAW-20261110-225213-E359DC.zip          # 原始 CSV + manifest 交接包
+└── RAW-20261110-225213-E359DC_research.zip # 派生层 + manifest + 文档
 ```
 
 `data/raw/` 与 `data/audits/` 是本地研究产物，不应提交到公开仓库。课程网盘交接时，应同时保留这三个 CSV、manifest 和本说明。
+
+`data/derived/` 与 `exports/` 同样不进入 Git；它们可从原始快照重建，不能替代原始 CSV、manifest 和 SHA256。
 
 ## 3. 数据来源与血缘
 
@@ -161,6 +176,33 @@ manifest 是数据集的机器可读说明，主要包括：
 
 本次快照的 `failures`、`symbols_missing_quotes` 和各类缺失字段计数均为 0。后续抓取若出现网络中断或接口覆盖差异，失败项会保留在 manifest 中；失败不能通过伪造数据补齐，需要时重新采集并生成新快照。
 
+### 5.1 覆盖度审计
+
+质量门控通过不等于每只股票都有相同的 1,000 日历史。派生层进一步按“全快照证券-日并集”构造会话索引，只检查每只股票自身首末记录之间的缺口。
+
+| 指标 | 结果 |
+| --- | ---: |
+| 快照交易日并集 | 1,045 |
+| 每股记录中位数 | 1,000 |
+| 每股记录 P10 | 994 |
+| 达到请求 1,000 日 | 2,676 只 |
+| 少于 950 日 | 267 只 |
+| 少于 500 日 | 101 只 |
+| 生命周期完整度 | 99.885% |
+| 存在内部会话缺口 | 454 只 |
+| 内部缺失会话合计 | 3,303 个 |
+
+少于 1,000 行主要来自上市较晚的股票，例如快照日刚上市的次新股。内部缺口可能来自停牌或接口缺行，只能作为待复核线索，不能直接当作网络采集失败，也不能用插值补造成交易记录。成员 B 可基于 `coverage_by_symbol.csv` 的 `first_date`、`last_date`、`missing_sessions` 和 `missing_ranges` 建立样本可用性掩码。
+
+生成与重建命令：
+
+```powershell
+.\.venv\Scripts\python.exe tools\build_research_exports.py RAW-20261110-225213-E359DC
+.\.venv\Scripts\python.exe tools\build_research_exports.py RAW-20261110-225213-E359DC --rebuild
+```
+
+完整口径、目录结构和 SQL 见 [研究派生层与覆盖度审计](research-exports.md)。
+
 ## 6. 采集与 AI 机器人流程
 
 ```text
@@ -210,10 +252,11 @@ manifest 是数据集的机器可读说明，主要包括：
 
 打开 `http://127.0.0.1:8789/`。
 
-页面承担两项与成员 A 相关工作：
+页面承担三项与成员 A 相关工作：
 
 1. **研究数据池**：浏览快照摘要、证券-日数据、实时行情和股票池，下载 CSV，发起普通采集或智能体采集任务。
 2. **AI 个股研究**：以三只股票为样板，展示重采行情、双源核价、Python 指标、规则评分、新闻公告和 DeepSeek 解读的六步研究链；每只股票展示 14 项指标的值、公式、含义、证据和建模用途。
+3. **覆盖度与派生层**：展示快照交易日、生命周期完整度、每股历史长度分布、年度覆盖和限制，并提供覆盖度 CSV/JSON、按年 Parquet 与 DuckDB 下载。
 
 网页用于课堂展示和他人复查，不连接券商、不发送交易指令，也不承诺投资收益。
 
@@ -265,6 +308,16 @@ labels: forward_return_5d, forward_return_20d,
 - 同时报告 IC、RankIC、ICIR、分层收益、换手率、最大回撤和交易成本敏感性。
 - 预测分数用于横截面排序或风险过滤，不把回测收益表述为未来保证。
 
+成员 C 可优先读取 `parquet/market_daily/` 或 `quantguard.duckdb`，避免反复解析 484 MB CSV。Parquet 与 DuckDB 行数必须与原始 manifest 一致，派生层重建后应重新核对 `export_manifest.json` 的 SHA256。
+
+```python
+import duckdb
+
+con = duckdb.connect('quantguard.duckdb', read_only=True)
+print(con.execute('SELECT COUNT(*), COUNT(DISTINCT symbol) FROM market_daily').fetchone())
+print(con.execute('SELECT * FROM coverage_by_symbol ORDER BY missing_sessions DESC LIMIT 10').fetchall())
+```
+
 ## 11. 复现与交接检查
 
 ```text
@@ -278,6 +331,9 @@ labels: forward_return_5d, forward_return_20d,
 [x] 失败记录逐项保留
 [x] 数据集卡片已提供
 [x] 交互网页与 API 验收通过
+[x] 覆盖度审计与 Parquet/DuckDB 派生层已生成
+[x] Parquet 行数与原始快照一致，DuckDB 可读
+[x] 研究交接 ZIP 与研究导出 SHA256 已生成
 [ ] 成员 B 建立治理版本并记录转换规则
 [ ] 成员 C 完成标签、时间切分、模型、组合回测和研究报告
 ```
@@ -285,5 +341,6 @@ labels: forward_return_5d, forward_return_20d,
 本卡片应与以下文档一起使用：
 
 - [研究数据台使用说明](data-agent-workbench.md)
+- [研究派生层与覆盖度审计](research-exports.md)
 - [项目总览](../README.md)
 - [最新 manifest](../data/manifests/RAW-20261110-225213-E359DC.json)

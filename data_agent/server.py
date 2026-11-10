@@ -11,6 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from data_agent.agent import DeepSeekClient
+from data_agent.research_exports import (
+    build_research_exports,
+    derived_file,
+    load_coverage,
+    load_research_exports,
+)
 from data_agent.risk_service import RiskAnalysisService
 from data_agent.service import CollectorService
 from data_agent.store import VIEWS
@@ -39,6 +45,19 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_file(self, path: Path, filename: str, content_type: str) -> None:
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header(
+            "Content-Disposition", f'attachment; filename="{filename}"'
+        )
+        self.send_header("Content-Length", str(path.stat().st_size))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                self.wfile.write(chunk)
 
     def _send_error_json(self, message: str, status: int = 400) -> None:
         self._send_json({"error": message, "status": status}, status=status)
@@ -115,22 +134,48 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
                     )
                     self._send_json(manifest)
                     return
+                if len(parts) == 2 and parts[1] == "coverage":
+                    self._send_json(
+                        load_coverage(
+                            run_id,
+                            derived_dir=self._service().derived_dir,
+                        )
+                    )
+                    return
+                if len(parts) == 2 and parts[1] == "derived":
+                    self._send_json(
+                        load_research_exports(
+                            run_id,
+                            derived_dir=self._service().derived_dir,
+                        )
+                    )
+                    return
+                if len(parts) == 2 and parts[1] == "derived-file":
+                    relative_path = (query.get("path") or [""])[0]
+                    if not relative_path:
+                        raise ValueError("缺少研究导出文件路径")
+                    path = derived_file(
+                        run_id,
+                        relative_path,
+                        derived_dir=self._service().derived_dir,
+                    )
+                    self._send_file(
+                        path,
+                        path.name,
+                        mimetypes.guess_type(path.name)[0]
+                        or "application/octet-stream",
+                    )
+                    return
                 if len(parts) == 2 and parts[1] == "csv":
                     view = (query.get("view") or ["daily"])[0]
                     if view not in VIEWS:
                         raise ValueError("数据视图只能是 daily、quotes 或 universe")
                     path = self._service().store.file_for_view(run_id, view)
-                    body = path.read_bytes()
-                    filename = f"{run_id}_{view}.csv"
-                    self.send_response(HTTPStatus.OK)
-                    self.send_header("Content-Type", "text/csv; charset=utf-8")
-                    self.send_header(
-                        "Content-Disposition", f'attachment; filename="{filename}"'
+                    self._send_file(
+                        path,
+                        f"{run_id}_{view}.csv",
+                        "text/csv; charset=utf-8",
                     )
-                    self.send_header("Content-Length", str(len(body)))
-                    self.send_header("Cache-Control", "no-store")
-                    self.end_headers()
-                    self.wfile.write(body)
                     return
                 if len(parts) == 2 and parts[1] == "rows":
                     view = (query.get("view") or ["daily"])[0]
@@ -164,6 +209,27 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         try:
             payload = self._read_json()
+            if parsed.path.startswith("/api/runs/") and parsed.path.endswith("/exports"):
+                run_id = urllib.parse.unquote(
+                    parsed.path.removeprefix("/api/runs/")
+                    .removesuffix("/exports")
+                    .strip("/")
+                )
+                result = build_research_exports(
+                    run_id,
+                    store=self._service().store,
+                    derived_dir=self._service().derived_dir,
+                    rebuild=bool(payload.get("rebuild")),
+                )
+                self._send_json(
+                    {
+                        "run_id": result["run_id"],
+                        "coverage": result["coverage"]["summary"],
+                        "parquet_rows": result["parquet"]["daily_rows"],
+                        "duckdb": result["duckdb"],
+                    }
+                )
+                return
             if parsed.path == "/api/jobs":
                 job = self._service().create_job(payload, background=True)
                 self._send_json(job, status=202)
