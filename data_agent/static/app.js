@@ -242,7 +242,7 @@ async function loadDatasets() {
 async function submitCollection(event) {
   event.preventDefault();
   const symbolText = $("#poolSymbols").value.trim();
-  const universeSize = Number($("#universeSize").value || 1200);
+  const universeSize = Number($("#universeSize").value || 3000);
   const historyDays = Number($("#poolHistoryDays").value || 250);
   try {
     const job = await api("/api/jobs", {

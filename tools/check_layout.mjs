@@ -139,6 +139,8 @@ try {
         after,
         newsRows: document.querySelectorAll('.news-row').length,
         datasetOptions: document.querySelectorAll('#datasetSelect option').length,
+        defaultPoolSize: document.querySelector('#universeSize')?.value,
+        poolOptions: Array.from(document.querySelectorAll('#universeSize option')).map((item) => item.value),
       };
     })()`,
   );
@@ -149,6 +151,11 @@ try {
   const mobileLayout = JSON.parse(mobile.layout);
   const failed =
     desktop.indicatorRows !== 14 ||
+    Number(desktop.poolSymbols.replaceAll(',', '')) < 2500 ||
+    Number(desktop.poolRows.replaceAll(',', '')) < 600000 ||
+    interaction.defaultPoolSize !== '3000' ||
+    !interaction.poolOptions.includes('3000') ||
+    !interaction.poolOptions.includes('5000') ||
     desktop.researchSteps !== 6 ||
     interaction.before === interaction.after ||
     interaction.newsRows < 1 ||

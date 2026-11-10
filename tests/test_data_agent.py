@@ -82,20 +82,20 @@ def test_collection_request_validation():
     assert request.symbols == ["600519", "000001"]
 
 
-def test_collection_request_supports_pool_of_1500():
+def test_collection_request_supports_pool_of_5000():
     request = CollectionRequest.from_payload(
-        {"universe_size": "1500", "history_days": "250"}
+        {"universe_size": "5000", "history_days": "250"}
     )
-    assert request.universe_size == 1500
+    assert request.universe_size == 5000
     assert request.history_days == 250
     with pytest.raises(ValueError):
         CollectionRequest.from_payload(
-            {"universe_size": 1501, "history_days": 250}
+            {"universe_size": 5001, "history_days": 250}
         )
     with pytest.raises(ValueError):
         CollectionRequest.from_payload(
-            {"universe_size": 1500, "history_days": 250, "symbols": ",".join([
-                f"{index:06d}" for index in range(1501)
+            {"universe_size": 5000, "history_days": 250, "symbols": ",".join([
+                f"{index:06d}" for index in range(5001)
             ])}
         )
 

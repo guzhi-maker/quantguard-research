@@ -11,7 +11,11 @@ from typing import Any, Callable
 
 from config.settings import PROJECT_ROOT
 from data_agent.catalog import get_source_catalog
-from data_agent.service import CollectionRequest, CollectorService
+from data_agent.service import (
+    MAX_UNIVERSE_SIZE,
+    CollectionRequest,
+    CollectorService,
+)
 from data_agent.store import now_iso
 
 
@@ -178,7 +182,7 @@ TOOLS = [
                     "universe_size": {
                         "type": "integer",
                         "minimum": 10,
-                        "maximum": 200,
+                        "maximum": MAX_UNIVERSE_SIZE,
                         "description": "按成交额筛选的股票数量；指定 symbols 时忽略。",
                     },
                     "history_days": {

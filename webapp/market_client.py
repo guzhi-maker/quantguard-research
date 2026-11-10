@@ -22,6 +22,7 @@ TENCENT_HISTORY_URL = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get"
 SINA_HISTORY_URL = "https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataService.getKLineData"
 SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) QuantGuard/1.0"
+MAX_UNIVERSE_SIZE = 5000
 
 _CACHE: dict[str, tuple[float, Any]] = {}
 _CACHE_LOCK = threading.Lock()
@@ -203,7 +204,7 @@ def _get_sina_universe(size: int) -> list[dict]:
 
 def _get_eastmoney_universe(limit: int = 40) -> list[dict]:
     """Return the most actively traded A shares ordered by turnover value."""
-    size = max(10, min(int(limit), 1500))
+    size = max(10, min(int(limit), MAX_UNIVERSE_SIZE))
     fields = "f12,f14,f2,f3,f5,f6,f8,f9,f20,f100"
     market_filter = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
 
@@ -260,7 +261,7 @@ def _get_eastmoney_universe(limit: int = 40) -> list[dict]:
 
 def get_liquid_universe(limit: int = 40) -> list[dict]:
     """Load a live liquid-share universe, falling back to Sina when needed."""
-    size = max(10, min(int(limit), 1500))
+    size = max(10, min(int(limit), MAX_UNIVERSE_SIZE))
     try:
         return _get_eastmoney_universe(size)
     except MarketDataError:

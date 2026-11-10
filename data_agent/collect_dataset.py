@@ -1,7 +1,7 @@
 """Collect a reproducible research snapshot from the command line.
 
 Example:
-    python data_agent/collect_dataset.py --universe-size 1200 --history-days 250
+    python data_agent/collect_dataset.py --universe-size 3000 --history-days 250
 
 Rows are appended to a staging folder as each symbol finishes. If the network
 drops, rerun with --staging <folder> to resume. A final immutable snapshot
@@ -30,8 +30,10 @@ def build_parser() -> argparse.ArgumentParser:
         description="QuantGuard 研究数据池采集器：抓取公开 A 股行情并生成可追溯快照。"
     )
     parser.add_argument(
-        "--universe-size", type=int, default=1200,
-        help="股票池数量（10-1500），默认 1200",
+        "--universe-size", type=int, default=3000,
+        help=(
+            f"股票池数量（10-{market_client.MAX_UNIVERSE_SIZE}），默认 3000"
+        ),
     )
     parser.add_argument(
         "--history-days", type=int, default=250,

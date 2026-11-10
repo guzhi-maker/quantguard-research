@@ -14,11 +14,11 @@ const audits = await json("/api/audits?limit=5");
 const latestRun = runs.items?.[0];
 const latestAudit = audits.items?.[0];
 
-if (!latestRun || latestRun.run_id !== "RAW-20261110-124549-780A2D") {
-  throw new Error("Latest thousand-stock snapshot is not first in /api/runs");
+if (!latestRun) {
+  throw new Error("No snapshot returned by /api/runs");
 }
-if (latestRun.summary?.symbols < 1000) {
-  throw new Error("Latest snapshot has fewer than 1000 successful stocks");
+if (latestRun.summary?.symbols < 2500 || latestRun.summary?.daily_rows < 600000) {
+  throw new Error("Latest expanded snapshot is missing expected coverage");
 }
 if ("symbols" in (latestRun.request || {})) {
   throw new Error("/api/runs still exposes the full symbol list");
