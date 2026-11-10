@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "run_id": "RAW-20261110-000911-6F2ED7",
+  "created_at": "2026-11-10T00:09:11+08:00",
+  "status": "complete",
+  "request": {
+    "universe_size": 10,
+    "history_days": 120,
+    "include_quotes": true,
+    "symbols": [
+      "600519",
+      "300750",
+      "601318"
+    ],
+    "query": "期末项目演示：真实行情、核价、资讯与 DeepSeek 研究报告",
+    "source_policy": "auto: 东方财富优先，腾讯与新浪按接口回退"
+  },
+  "agent": {
+    "provider": "risk-bot",
+    "model": "deepseek-chat"
+  },
+  "summary": {
+    "symbols": 3,
+    "requested_symbols": 3,
+    "daily_rows": 360,
+    "quote_rows": 3,
+    "failures": 0,
+    "date_min": "2026-05-15",
+    "date_max": "2026-11-09",
+    "sources": [
+      "东方财富前复权日行情"
+    ]
+  },
+  "quality": {
+    "symbol_count": 3,
+    "quote_symbol_count": 3,
+    "duplicate_keys": 0,
+    "invalid_price_rows": 0,
+    "missing_close": 0,
+    "missing_amount": 0,
+    "missing_volume": 0,
+    "date_min": "2026-05-15",
+    "date_max": "2026-11-09",
+    "rows_by_source": {
+      "东方财富前复权日行情": 360
+    },
+    "rows_by_adjustment": {
+      "qfq": 360
+    },
+    "symbols_missing_quotes": []
+  },
+  "failures": [],
+  "files": {
+    "daily": {
+      "path": "data/raw/RAW-20261110-000911-6F2ED7/market_daily.csv",
+      "filename": "market_daily.csv",
+      "rows": 360,
+      "bytes": 61850,
+      "sha256": "1034a34737ec4b16eafd9c62106da883f0297b30a4d34acf77206a0bdc09e0e8",
+      "columns": [
+        "date",
+        "symbol",
+        "name",
+        "industry",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "amount",
+        "amplitude",
+        "change_pct",
+        "change",
+        "turnover",
+        "source",
+        "adjustment",
+        "fetched_at"
+      ]
+    },
+    "quotes": {
+      "path": "data/raw/RAW-20261110-000911-6F2ED7/market_quotes.csv",
+      "filename": "market_quotes.csv",
+      "rows": 3,
+      "bytes": 782,
+      "sha256": "d5f1e720690a7baab61716e712a92a134dfb2076181d8e2d1ddee9511026936f",
+      "columns": [
+        "symbol",
+        "name",
+        "industry",
+        "price",
+        "open",
+        "high",
+        "low",
+        "prev_close",
+        "change",
+        "change_pct",
+        "turnover_rate",
+        "pe",
+        "pb",
+        "volume",
+        "amount",
+        "market_cap",
+        "float_market_cap",
+        "source",
+        "updated_at",
+        "fetched_at"
+      ]
+    },
+    "universe": {
+      "path": "data/raw/RAW-20261110-000911-6F2ED7/universe.csv",
+      "filename": "universe.csv",
+      "rows": 3,
+      "bytes": 345,
+      "sha256": "d6b33e962883a006dddf91afaed47212233fd2707796af0b995c3e6f015aa35c",
+      "columns": [
+        "symbol",
+        "name",
+        "industry",
+        "price",
+        "change_pct",
+        "volume",
+        "amount",
+        "turnover_rate",
+        "pe",
+        "market_cap",
+        "source",
+        "fetched_at"
+      ]
+    }
+  },
+  "lineage": [
+    {
+      "source": "东方财富前复权日行情",
+      "rows": 360,
+      "adjustment": [
+        "qfq"
+      ]
+    }
+  ],
+  "limitations": [
+    "股票池来自抓取时点的公开流动性快照，不是历史时点成分股。",
+    "公开接口可能延迟、限流或临时调整字段，失败记录保留在 failures 中。",
+    "腾讯和新浪的成交额可能由成交量与收盘价估算，具体以每行 source 为准。",
+    "原始数据未做后续研究清洗，缺失值、停牌和异常值需由数据治理环节复核。"
+  ],
+  "trace": [
+    {
+      "time": "2026-11-10T00:09:09+08:00",
+      "event": "universe",
+      "message": "开始确定股票池"
+    },
+    {
+      "time": "2026-11-10T00:09:10+08:00",
+      "event": "universe",
+      "message": "使用指定股票池: 3 只"
+    },
+    {
+      "time": "2026-11-10T00:09:10+08:00",
+      "event": "fetch",
+      "message": "抓取 600519 历史行情",
+      "current": 0,
+      "total": 3,
+      "percent": 0
+    },
+    {
+      "time": "2026-11-10T00:09:10+08:00",
+      "event": "fetch",
+      "message": "600519 完成: 120 行",
+      "current": 1,
+      "total": 3,
+      "percent": 33
+    },
+    {
+      "time": "2026-11-10T00:09:10+08:00",
+      "event": "fetch",
+      "message": "抓取 300750 历史行情",
+      "current": 1,
+      "total": 3,
+      "percent": 33
+    },
+    {
+      "time": "2026-11-10T00:09:10+08:00",
+      "event": "fetch",
+      "message": "300750 完成: 120 行",
+      "current": 2,
+      "total": 3,
+      "percent": 67
+    },
+    {
+      "time": "2026-11-10T00:09:10+08:00",
+      "event": "fetch",
+      "message": "抓取 601318 历史行情",
+      "current": 2,
+      "total": 3,
+      "percent": 67
+    },
+    {
+      "time": "2026-11-10T00:09:11+08:00",
+      "event": "fetch",
+      "message": "601318 完成: 120 行",
+      "current": 3,
+      "total": 3,
+      "percent": 100
+    }
+  ]
+}

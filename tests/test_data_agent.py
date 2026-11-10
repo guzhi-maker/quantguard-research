@@ -4,6 +4,8 @@ import json
 import threading
 from urllib.request import Request, urlopen
 
+import pytest
+
 from data_agent.agent import DeepSeekAgent, DeepSeekClient
 from data_agent.server import create_server
 from data_agent.service import CollectorService, CollectionRequest
@@ -78,6 +80,39 @@ def test_collection_request_validation():
     assert request.history_days == 60
     assert request.include_quotes is False
     assert request.symbols == ["600519", "000001"]
+
+
+def test_collection_request_supports_pool_of_1500():
+    request = CollectionRequest.from_payload(
+        {"universe_size": "1500", "history_days": "250"}
+    )
+    assert request.universe_size == 1500
+    assert request.history_days == 250
+    with pytest.raises(ValueError):
+        CollectionRequest.from_payload(
+            {"universe_size": 1501, "history_days": 250}
+        )
+    with pytest.raises(ValueError):
+        CollectionRequest.from_payload(
+            {"universe_size": 1500, "history_days": 250, "symbols": ",".join([
+                f"{index:06d}" for index in range(1501)
+            ])}
+        )
+
+
+def test_run_summaries_omit_trace_but_keep_evidence(tmp_path):
+    service = make_service(tmp_path)
+    result = service.collect(
+        CollectionRequest(universe_size=12, history_days=30)
+    )
+    summaries = service.store.list_run_summaries(limit=5)
+    assert len(summaries) == 1
+    summary = summaries[0]
+    assert summary["run_id"] == result["run_id"]
+    assert "trace" not in summary
+    assert "symbols" not in summary["request"]
+    assert summary["files"]["daily"]["rows"] == 108
+    assert summary["manifest_path"].startswith("manifests/")
 
 
 def test_fixed_collection_writes_csv_manifest_and_hashes(tmp_path):
@@ -276,6 +311,12 @@ def test_collector_server_api_and_static_page(tmp_path):
         assert "股票风险体检" in html
         assert 'id="analysisForm"' in html
         assert "/app.js" in html
+        assert "研究数据池" in html
+        assert 'id="dataPoolForm"' in html
+        assert 'id="reportTitle"' in html
+        assert 'id="researchChain"' in html
+        assert 'id="indicatorTable"' in html
+        assert 'id="universeSize"' in html
     finally:
         server.shutdown()
         server.server_close()

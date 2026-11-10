@@ -128,99 +128,125 @@ def _is_tradable_share(symbol: str, name: str) -> bool:
 
 
 def _get_sina_universe(size: int) -> list[dict]:
-    query = urllib.parse.urlencode(
-        {
-            "page": 1,
-            "num": size,
-            "sort": "amount",
-            "asc": 0,
-            "node": "hs_a",
-            "symbol": "",
-            "_s_r_a": "page",
-        }
-    )
-    payload = _cached(
-        f"sina-universe:{size}",
-        ttl=45,
-        loader=lambda: _fetch_json(
-            f"{SINA_MARKET_URL}?{query}",
-            referer="https://finance.sina.com.cn/",
-        ),
-    )
-    if not isinstance(payload, list):
-        raise MarketDataError("新浪公开行情返回格式异常")
-    items = []
-    for row in payload:
-        if not isinstance(row, dict):
-            continue
-        symbol = str(row.get("code") or "").strip()
-        name = _clean_name(row.get("name"), symbol)
-        if not _is_tradable_share(symbol, name):
-            continue
-        items.append(
-            {
-                "symbol": symbol,
-                "name": name,
-                "industry": "A股",
-                "price": _number(row.get("trade")),
-                "change_pct": _scaled(row.get("changepercent")),
-                "volume": _number(row.get("volume")),
-                "amount": _number(row.get("amount")),
-                "turnover_rate": _scaled(row.get("turnoverratio")),
-                "pe": _number(row.get("per")),
-                "market_cap": _number(row.get("nmc")),
-                "source": "新浪财经公开行情",
-            }
-        )
-    if not items:
-        raise MarketDataError("新浪公开行情未返回可用股票池")
-    return items[:size]
+    def load():
+        items = []
+        seen = set()
+        for page in range(1, (size + 99) // 100 + 1):
+            query = urllib.parse.urlencode(
+                {
+                    "page": page,
+                    "num": 100,
+                    "sort": "amount",
+                    "asc": 0,
+                    "node": "hs_a",
+                    "symbol": "",
+                    "_s_r_a": "page",
+                }
+            )
+            url = f"{SINA_MARKET_URL}?{query}"
+            payload = _cached(
+                f"sina-universe:{size}:{page}",
+                ttl=45,
+                loader=lambda url=url: _fetch_json(
+                    url, referer="https://finance.sina.com.cn/"
+                ),
+            )
+            if not isinstance(payload, list) or not payload:
+                break
+            for row in payload:
+                if not isinstance(row, dict):
+                    continue
+                symbol = str(row.get("code") or "").strip()
+                name = _clean_name(row.get("name"), symbol)
+                if not _is_tradable_share(symbol, name) or symbol in seen:
+                    continue
+                seen.add(symbol)
+                items.append(
+                    {
+                        "symbol": symbol,
+                        "name": name,
+                        "industry": "A股",
+                        "price": _number(row.get("trade")),
+                        "change_pct": _scaled(row.get("changepercent")),
+                        "volume": _number(row.get("volume")),
+                        "amount": _number(row.get("amount")),
+                        "turnover_rate": _scaled(row.get("turnoverratio")),
+                        "pe": _number(row.get("per")),
+                        "market_cap": _number(row.get("nmc")),
+                        "source": "新浪财经公开行情",
+                    }
+                )
+                if len(items) >= size:
+                    break
+            if len(items) >= size or len(payload) < 100:
+                break
+        if not items:
+            raise MarketDataError("新浪公开行情未返回可用股票池")
+        return items[:size]
+
+    return load()
 
 
 def _get_eastmoney_universe(limit: int = 40) -> list[dict]:
     """Return the most actively traded A shares ordered by turnover value."""
-    size = max(10, min(int(limit), 200))
+    size = max(10, min(int(limit), 1500))
     fields = "f12,f14,f2,f3,f5,f6,f8,f9,f20,f100"
     market_filter = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23"
-    url = (
-        f"{MARKET_LIST_URL}?pn=1&pz={size}&po=1&np=1&fltt=2&invt=2"
-        f"&fid=f6&fs={market_filter}&fields={fields}"
-    )
-    payload = _cached(f"universe:{size}", ttl=60, loader=lambda: _fetch_json(url))
-    data = payload.get("data") or {}
-    rows = data.get("diff") or []
-    if isinstance(rows, dict):
-        rows = list(rows.values())
 
-    items = []
-    for row in rows:
-        symbol = str(row.get("f12") or "").strip()
-        name = _clean_name(row.get("f14"), symbol)
-        if not re.fullmatch(r"\d{6}", symbol) or any(word in name for word in ("ST", "退")):
-            continue
-        items.append(
-            {
-                "symbol": symbol,
-                "name": name,
-                "industry": str(row.get("f100") or "未分类").strip(),
-                "price": _number(row.get("f2")),
-                "change_pct": _scaled(row.get("f3")),
-                "volume": _number(row.get("f5")),
-                "amount": _number(row.get("f6")),
-                "turnover_rate": _scaled(row.get("f8")),
-                "pe": _number(row.get("f9")),
-                "market_cap": _number(row.get("f20")),
-                "source": "东方财富公开行情",
-            }
-        )
-    if not items:
-        raise MarketDataError("未获取到可用于研究的股票池")
-    return items[:size]
+    def load():
+        items = []
+        seen = set()
+        for page in range(1, (size + 99) // 100 + 1):
+            url = (
+                f"{MARKET_LIST_URL}?pn={page}&pz=100&po=1&np=1&fltt=2&invt=2"
+                f"&fid=f6&fs={market_filter}&fields={fields}"
+            )
+            payload = _cached(
+                f"eastmoney-universe:{size}:{page}",
+                ttl=60,
+                loader=lambda url=url: _fetch_json(url),
+            )
+            data = payload.get("data") or {}
+            rows = data.get("diff") or []
+            if isinstance(rows, dict):
+                rows = list(rows.values())
+            if not rows:
+                break
+            for row in rows:
+                symbol = str(row.get("f12") or "").strip()
+                name = _clean_name(row.get("f14"), symbol)
+                if not _is_tradable_share(symbol, name) or symbol in seen:
+                    continue
+                seen.add(symbol)
+                items.append(
+                    {
+                        "symbol": symbol,
+                        "name": name,
+                        "industry": str(row.get("f100") or "未分类").strip(),
+                        "price": _number(row.get("f2")),
+                        "change_pct": _scaled(row.get("f3")),
+                        "volume": _number(row.get("f5")),
+                        "amount": _number(row.get("f6")),
+                        "turnover_rate": _scaled(row.get("f8")),
+                        "pe": _number(row.get("f9")),
+                        "market_cap": _number(row.get("f20")),
+                        "source": "东方财富公开行情",
+                    }
+                )
+                if len(items) >= size:
+                    break
+            if len(items) >= size or len(rows) < 100:
+                break
+        if not items:
+            raise MarketDataError("未获取到可用于研究的股票池")
+        return items[:size]
+
+    return load()
 
 
 def get_liquid_universe(limit: int = 40) -> list[dict]:
     """Load a live liquid-share universe, falling back to Sina when needed."""
-    size = max(10, min(int(limit), 200))
+    size = max(10, min(int(limit), 1500))
     try:
         return _get_eastmoney_universe(size)
     except MarketDataError:

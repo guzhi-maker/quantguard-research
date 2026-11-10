@@ -8,6 +8,7 @@ import json
 import math
 import re
 import uuid
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -297,6 +298,38 @@ class RawRunStore:
             manifests.append(payload)
         manifests.sort(key=lambda item: item.get("created_at", ""), reverse=True)
         return manifests[: max(1, min(int(limit), 100))]
+
+    def list_run_summaries(self, limit: int = 30) -> list[dict]:
+        """Return recent manifests without large trace blocks."""
+        summaries = []
+        for manifest in self.list_runs(limit):
+            request = deepcopy(manifest.get("request") or {})
+            request.pop("symbols", None)
+            summaries.append(
+                {
+                    key: deepcopy(manifest.get(key))
+                    for key in (
+                        "schema_version",
+                        "run_id",
+                        "created_at",
+                        "status",
+                        "request",
+                        "agent",
+                        "summary",
+                        "quality",
+                        "failures",
+                        "files",
+                        "lineage",
+                        "limitations",
+                    )
+                }
+            )
+            summaries[-1]["request"] = request
+            manifest_path = self.manifest_dir / f"{manifest.get('run_id')}.json"
+            summaries[-1]["manifest_path"] = manifest_path.relative_to(
+                self.root
+            ).as_posix()
+        return summaries
 
     def load_run(self, run_id: str) -> dict:
         if not RUN_ID_RE.fullmatch(str(run_id)):

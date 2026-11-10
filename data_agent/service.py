@@ -47,8 +47,8 @@ def _symbols(value: Any) -> list[str]:
         if symbol not in seen:
             result.append(symbol)
             seen.add(symbol)
-    if len(result) > 200:
-        raise ValueError("单次采集最多支持 200 只股票")
+    if len(result) > 1500:
+        raise ValueError("单次采集最多支持 1500 只股票")
     return result
 
 
@@ -68,8 +68,8 @@ class CollectionRequest:
             history_days = int(data.get("history_days", 500))
         except (TypeError, ValueError) as exc:
             raise ValueError("股票池数量和历史天数必须是整数") from exc
-        if not 10 <= universe_size <= 200:
-            raise ValueError("股票池数量必须在 10 到 200 之间")
+        if not 10 <= universe_size <= 1500:
+            raise ValueError("股票池数量必须在 10 到 1500 之间")
         if not 30 <= history_days <= 500:
             raise ValueError("历史天数必须在 30 到 500 之间")
         query = str(data.get("query") or "").strip()

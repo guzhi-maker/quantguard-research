@@ -41,3 +41,5 @@ Thumbs.db
 .coverage
 htmlcov/
 server*.log
+collect-*.log
+layout-*.html

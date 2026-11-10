@@ -1,8 +1,12 @@
 const state = {
   overview: null,
   audits: [],
+  datasets: [],
   activeAudit: null,
+  activeDatasetId: null,
+  selectedSymbol: null,
   activeJob: null,
+  jobKind: null,
   activeTab: "alerts",
   pollTimer: null,
 };
@@ -148,6 +152,118 @@ async function loadAudit(auditId) {
   }
 }
 
+function currentDataset() {
+  return (
+    state.datasets.find((item) => item.run_id === state.activeDatasetId) ||
+    state.datasets[0] ||
+    null
+  );
+}
+
+function renderPool() {
+  const select = $("#datasetSelect");
+  clear(select);
+  const links = $("#datasetLinks");
+  clear(links);
+  const info = $("#datasetInfo");
+  clear(info);
+
+  if (!state.datasets.length) {
+    select.append(new Option("暂无数据快照", ""));
+    select.disabled = true;
+    $("#poolSymbolsCount").textContent = "—";
+    $("#poolRowsCount").textContent = "—";
+    $("#poolDateRange").textContent = "—";
+    $("#poolFailures").textContent = "—";
+    info.append(node("span", "", "还没有本地快照，先采集一次数据池。"));
+    return;
+  }
+
+  select.disabled = false;
+  state.datasets.forEach((item) => {
+    const summary = item.summary || {};
+    select.append(
+      new Option(
+        `${formatDate(item.created_at, false)} · ${formatInteger(summary.symbols)} 只 / ${formatInteger(summary.daily_rows)} 行`,
+        item.run_id,
+      ),
+    );
+  });
+
+  const dataset = currentDataset();
+  select.value = dataset.run_id;
+  const summary = dataset.summary || {};
+  const quality = dataset.quality || {};
+  const request = dataset.request || {};
+  const symbols = Number(summary.symbols) || 0;
+  const rows = Number(summary.daily_rows) || 0;
+  $("#poolSymbolsCount").textContent = formatInteger(summary.symbols);
+  $("#poolRowsCount").textContent = formatInteger(summary.daily_rows);
+  $("#poolDateRange").textContent = summary.date_min && summary.date_max
+    ? `${summary.date_min} ~ ${summary.date_max}`
+    : "—";
+  $("#poolFailures").textContent = formatInteger(summary.failures);
+
+  [
+    ["快照编号", dataset.run_id],
+    ["采集时间", formatDate(dataset.created_at)],
+    ["平均每股", symbols ? `${(rows / symbols).toFixed(1)} 行` : "—"],
+    ["数据源", (summary.sources || []).join(" / ") || "—"],
+    ["请求参数", `${formatInteger(request.universe_size)} 只 / ${formatInteger(request.history_days)} 日 · 实时行情 ${request.include_quotes === false ? "否" : "是"}`],
+    ["质量检查", `重复键 ${formatInteger(quality.duplicate_keys)} · 非法价 ${formatInteger(quality.invalid_price_rows)} · 行情行 ${formatInteger(summary.quote_rows)}`],
+  ].forEach(([label, value]) => {
+    const row = node("div", "dataset-info-row");
+    row.append(node("span", "", label), node("strong", "", value));
+    info.append(row);
+  });
+
+  [
+    ["日线 CSV", "daily"],
+    ["行情 CSV", "quotes"],
+    ["股票池 CSV", "universe"],
+  ].forEach(([label, view]) => {
+    const link = node("a", "text-link", label);
+    link.href = `/api/runs/${encodeURIComponent(dataset.run_id)}/csv?view=${view}`;
+    links.append(link);
+  });
+  const manifest = node("a", "text-link", "manifest");
+  manifest.href = `/api/runs/${encodeURIComponent(dataset.run_id)}`;
+  manifest.target = "_blank";
+  manifest.rel = "noopener noreferrer";
+  links.append(manifest);
+}
+
+async function loadDatasets() {
+  const payload = await api("/api/runs?limit=20");
+  state.datasets = payload.items || [];
+  renderPool();
+}
+
+async function submitCollection(event) {
+  event.preventDefault();
+  const symbolText = $("#poolSymbols").value.trim();
+  const universeSize = Number($("#universeSize").value || 1200);
+  const historyDays = Number($("#poolHistoryDays").value || 250);
+  try {
+    const job = await api("/api/jobs", {
+      method: "POST",
+      body: JSON.stringify({
+        mode: "fixed",
+        universe_size: universeSize,
+        history_days: historyDays,
+        include_quotes: true,
+        symbols: symbolText,
+        query: "研究数据池：公开行情批量采集",
+      }),
+    });
+    state.jobKind = "dataset";
+    renderJob(job);
+    pollJob(job.id);
+  } catch (error) {
+    toast(error.message, true);
+  }
+}
+
 function renderTrace(events) {
   const list = $("#traceList");
   clear(list);
@@ -179,16 +295,21 @@ function renderJob(job) {
   };
   const panel = $("#jobPanel");
   panel.hidden = false;
-  $("#jobTitle").textContent = status === "complete" ? "研判完成" : "正在研判";
+  const isDataset = state.jobKind === "dataset";
+  $("#jobTitle").textContent = status === "complete"
+    ? (isDataset ? "采集完成" : "研判完成")
+    : (isDataset ? "正在采集数据池" : "正在研判");
   $("#jobStage").textContent = labels[status] || status;
   $("#jobPercent").textContent = `${Math.round(Number(job.progress) || 0)}%`;
   $("#progressBar").style.width = `${Math.max(0, Math.min(100, Number(job.progress) || 0))}%`;
   renderTrace(job.events || []);
   const running = status === "queued" || status === "running";
+  $("#collectButton").disabled = running;
   $("#analyzeButton").disabled = running;
-  $("#analyzeButton").textContent = running ? "研判中" : "开始智能研判";
+  $("#collectButton").textContent = running && isDataset ? "采集中" : "采集数据池";
+  $("#analyzeButton").textContent = running && !isDataset ? "研判中" : "生成研究报告";
   if (status === "failed") {
-    $("#jobTitle").textContent = "研判未完成";
+    $("#jobTitle").textContent = isDataset ? "采集未完成" : "研判未完成";
     $("#jobStage").textContent = job.error || "执行失败";
     toast(job.error || "研判任务失败", true);
   }
@@ -215,6 +336,7 @@ async function submitAnalysis(event) {
     });
     $("#emptyState").hidden = true;
     $("#resultView").hidden = true;
+    state.jobKind = "risk";
     renderJob(job);
     pollJob(job.id);
   } catch (error) {
@@ -224,6 +346,7 @@ async function submitAnalysis(event) {
 
 async function pollJob(jobId) {
   window.clearTimeout(state.pollTimer);
+  const jobKind = state.jobKind;
   try {
     const job = await api(`/api/jobs/${encodeURIComponent(jobId)}`);
     renderJob(job);
@@ -233,10 +356,19 @@ async function pollJob(jobId) {
     }
     if (job.status === "complete" && job.result) {
       $("#jobPanel").hidden = true;
+      if (jobKind === "dataset") {
+        const result = job.result || {};
+        state.activeDatasetId = result.run_id || null;
+        state.jobKind = null;
+        await loadDatasets();
+        toast(`数据池已保存：${formatInteger(result.summary?.daily_rows)} 行`);
+        return;
+      }
       renderAudit(job.result);
       await loadHistory();
       renderAudit(job.result);
-      toast("风险体检完成");
+      state.jobKind = null;
+      toast("研究报告已生成");
     }
   } catch (error) {
     toast(error.message, true);
@@ -249,6 +381,21 @@ function renderStockList(assessments) {
   assessments.forEach((item) => {
     const row = node("article", "stock-row");
     row.dataset.level = item.level;
+    row.classList.toggle("is-selected", item.symbol === state.selectedSymbol);
+    row.tabIndex = 0;
+    row.setAttribute("role", "button");
+    row.addEventListener("click", () => {
+      state.selectedSymbol = item.symbol;
+      renderReport();
+      renderStockList(assessments);
+    });
+    row.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      state.selectedSymbol = item.symbol;
+      renderReport();
+      renderStockList(assessments);
+    });
     const identity = node("div", "stock-identity");
     identity.append(
       node("strong", "", item.name),
@@ -408,6 +555,132 @@ function renderRaw(container, audit) {
   container.append(links);
 }
 
+function selectedAssessment() {
+  const assessments = state.activeAudit?.assessments || [];
+  return assessments.find((item) => item.symbol === state.selectedSymbol) || assessments[0] || null;
+}
+
+function renderReport() {
+  const audit = state.activeAudit;
+  const assessments = audit?.assessments || [];
+  const tabs = $("#stockTabs");
+  clear(tabs);
+  if (!assessments.length) return;
+  const current = selectedAssessment();
+  state.selectedSymbol = current.symbol;
+
+  assessments.forEach((item) => {
+    const button = node("button", "stock-tab");
+    button.type = "button";
+    button.setAttribute("role", "tab");
+    button.dataset.level = item.level;
+    button.classList.toggle("is-active", item.symbol === current.symbol);
+    button.append(node("strong", "", item.name), node("span", "", item.symbol));
+    button.addEventListener("click", () => {
+      state.selectedSymbol = item.symbol;
+      renderReport();
+      renderStockList(assessments);
+    });
+    tabs.append(button);
+  });
+
+  const identity = $("#reportIdentity");
+  clear(identity);
+  const title = node("div", "report-title");
+  const badge = node("span", "level-badge");
+  setLevelBadge(badge, current.level, current.level_label);
+  title.append(
+    node("h3", "", `${current.name} ${current.symbol}`),
+    badge,
+  );
+  const validationStatus = current.validation?.status || "warn";
+  const validationLabel =
+    validationStatus === "pass" ? "核对通过" : validationStatus === "fail" ? "核对失败" : "需要关注";
+  const crossStatus = current.validation?.cross_source?.status || "unavailable";
+  const crossLabel =
+    crossStatus === "verified" ? "一致" : crossStatus === "mismatch" ? "偏差超阈值" : "不可用";
+  const facts = node("div", "report-facts");
+  [
+    ["最新价", formatPrice(current.price)],
+    ["当日涨跌", formatPct(current.change_pct, 2)],
+    ["风险分", current.score ?? "—"],
+    ["数据核对", validationLabel],
+    ["双源核价", crossLabel],
+  ].forEach(([label, value]) => {
+    const cell = node("div", "report-fact");
+    cell.append(node("span", "", label), node("strong", "", value));
+    facts.append(cell);
+  });
+  identity.append(title, facts);
+
+  const chain = $("#researchChain");
+  clear(chain);
+  (current.research_steps || []).forEach((step) => {
+    const item = node("li", "research-step");
+    item.dataset.status = step.status || "done";
+    const head = node("div", "research-step-head");
+    head.append(
+      node("span", "step-index", step.step),
+      node("strong", "", step.action),
+      node("span", "quiet-badge", step.actor),
+      node("span", "step-status", step.status === "warn" ? "需复核" : "完成"),
+    );
+    const grid = node("div", "step-grid");
+    [["输入", step.input], ["输出", step.output]].forEach(([label, value]) => {
+      const cell = node("div", "step-cell");
+      cell.append(node("span", "", label), node("p", "", value));
+      grid.append(cell);
+    });
+    item.append(head, grid);
+    chain.append(item);
+  });
+
+  const table = $("#indicatorTable");
+  clear(table);
+  (current.indicator_details || []).forEach((indicator) => {
+    const row = node("article", "indicator-row");
+    const head = node("div", "indicator-head");
+    head.append(
+      node("strong", "", indicator.label),
+      node("span", "indicator-value", indicator.display),
+      node("span", "quiet-badge", indicator.window),
+    );
+    const grid = node("dl", "indicator-grid");
+    [
+      ["公式与输入", indicator.formula],
+      ["衡量含义", indicator.meaning],
+      ["后续建模用法", indicator.usage],
+      ["证据来源", indicator.source],
+    ].forEach(([label, value]) => {
+      const cell = node("div", "indicator-cell");
+      cell.append(node("dt", "", label), node("dd", "", value));
+      grid.append(cell);
+    });
+    row.append(head, grid);
+    table.append(row);
+  });
+}
+
+function renderResearchDesign(audit) {
+  const container = $("#researchDesign");
+  clear(container);
+  const design = audit?.research_design || {};
+  const labels = {
+    universe: "研究样本",
+    labels: "预测标签",
+    features: "特征工程",
+    split: "时间切分",
+    leakage_checks: "泄漏检查",
+    evaluation: "模型评估",
+    portfolio: "组合落地",
+  };
+  Object.entries(design).forEach(([key, value]) => {
+    const cell = node("div", "design-item");
+    cell.append(node("dt", "", labels[key] || key), node("dd", "", value));
+    container.append(cell);
+  });
+}
+
 function renderDetail() {
   const audit = state.activeAudit;
   if (!audit) return;
@@ -454,14 +727,87 @@ function renderAudit(audit) {
     : "";
   renderStockList(assessments);
   renderDetail();
+  if (!assessments.some((item) => item.symbol === state.selectedSymbol)) {
+    state.selectedSymbol = assessments[0]?.symbol || null;
+  }
+  renderReport();
+  renderResearchDesign(audit);
   $("#auditId").textContent = audit.audit_id || "—";
   $("#runId").textContent = audit.evidence?.run_id || "—";
   populateHistory();
   if (audit.audit_id) $("#historySelect").value = audit.audit_id;
 }
 
+function runLayoutCheck() {
+  const viewport = { width: window.innerWidth, height: window.innerHeight };
+  const root = document.documentElement;
+  const overflowX = Math.max(root.scrollWidth, document.body.scrollWidth) - viewport.width;
+  const overflowEls = [];
+  document.querySelectorAll("body *").forEach((element) => {
+    const style = getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden") return;
+    const scrollable = ["auto", "scroll"].includes(style.overflowX);
+    if (!scrollable && element.scrollWidth > element.clientWidth + 2) {
+      overflowEls.push({
+        tag: element.tagName,
+        id: element.id,
+        className: String(element.className || ""),
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+      });
+    }
+  });
+
+  const selectors = [
+    ".app-header",
+    ".pool-section",
+    ".intake",
+    ".job-panel",
+    ".verdict",
+    ".brief-section",
+    ".report-section",
+    ".stocks-section",
+    ".detail-section",
+    ".design-section",
+    ".audit-footer",
+  ];
+  const boxes = selectors
+    .map((selector) => {
+      const element = document.querySelector(selector);
+      if (!element || element.hidden) return null;
+      const rect = element.getBoundingClientRect();
+      return { selector, top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY };
+    })
+    .filter(Boolean);
+  const overlaps = [];
+  for (let index = 0; index < boxes.length - 1; index += 1) {
+    if (boxes[index].bottom > boxes[index + 1].top + 2) {
+      overlaps.push([boxes[index].selector, boxes[index + 1].selector]);
+    }
+  }
+
+  const report = {
+    viewport,
+    overflowX,
+    overflowEls: overflowEls.slice(0, 20),
+    overlaps,
+    indicators: document.querySelectorAll(".indicator-row").length,
+    steps: document.querySelectorAll(".research-step").length,
+  };
+  const pre = document.createElement("pre");
+  pre.id = "layoutReport";
+  pre.textContent = JSON.stringify(report);
+  pre.style.display = "none";
+  document.body.append(pre);
+}
+
 async function init() {
   $("#analysisForm").addEventListener("submit", submitAnalysis);
+  $("#dataPoolForm").addEventListener("submit", submitCollection);
+  $("#datasetSelect").addEventListener("change", (event) => {
+    state.activeDatasetId = event.target.value;
+    renderPool();
+  });
   $$(".tab").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeTab = button.dataset.tab;
@@ -474,8 +820,12 @@ async function init() {
   try {
     state.overview = await api("/api/overview");
     renderAgentStatus();
+    await loadDatasets();
     await loadHistory();
     if (state.audits.length) renderAudit(state.audits[0]);
+    if (new URLSearchParams(window.location.search).has("layout")) {
+      window.setTimeout(runLayoutCheck, 800);
+    }
   } catch (error) {
     toast(error.message, true);
   }

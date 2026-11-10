@@ -20,10 +20,66 @@
   </header>
 
   <main class="workspace">
+    <section class="pool-section" aria-labelledby="poolTitle">
+      <div class="intake-heading">
+        <div>
+          <span class="eyebrow">RESEARCH DATASET · 研究数据池</span>
+          <h1 id="poolTitle">量化研究数据台</h1>
+        </div>
+        <p class="pool-note">公开行情 → 原始快照 → 指标计算 → 风险研判</p>
+      </div>
+
+      <form id="dataPoolForm" class="pool-form">
+        <label class="window-field" for="universeSize">
+          <span>股票数量</span>
+          <select id="universeSize">
+            <option value="240">240 只</option>
+            <option value="600">600 只</option>
+            <option value="1200" selected>1,200 只</option>
+            <option value="1500">1,500 只</option>
+          </select>
+        </label>
+        <label class="window-field" for="poolHistoryDays">
+          <span>历史交易日</span>
+          <select id="poolHistoryDays">
+            <option value="120">120 日</option>
+            <option value="250" selected>250 日</option>
+            <option value="500">500 日</option>
+          </select>
+        </label>
+        <label class="symbol-field pool-symbol-field" for="poolSymbols">
+          <span>指定代码（可选）</span>
+          <input id="poolSymbols" type="text" autocomplete="off" placeholder="留空则按成交额抓取股票池">
+        </label>
+        <button class="primary-button" id="collectButton" type="submit">采集数据池</button>
+      </form>
+
+      <div class="metric-grid pool-stats" aria-label="数据池摘要">
+        <div><span>股票数量</span><strong id="poolSymbolsCount">—</strong></div>
+        <div><span>证券-日行数</span><strong id="poolRowsCount">—</strong></div>
+        <div><span>日期范围</span><strong id="poolDateRange">—</strong></div>
+        <div><span>采集失败</span><strong id="poolFailures">—</strong></div>
+      </div>
+
+      <div class="pool-meta">
+        <label class="history-picker" for="datasetSelect">
+          <span>历史快照</span>
+          <select id="datasetSelect" aria-label="选择数据快照"></select>
+        </label>
+        <div id="datasetInfo" class="dataset-info">
+          <span>正在读取本地快照</span>
+        </div>
+        <div id="datasetLinks" class="download-links"></div>
+      </div>
+    </section>
+
     <section class="intake" aria-labelledby="pageTitle">
       <div class="intake-heading">
-        <span class="eyebrow">STOCK RISK CHECK</span>
-        <h1 id="pageTitle">股票风险体检</h1>
+        <div>
+          <span class="eyebrow">STOCK RESEARCH REPORT</span>
+          <h2 id="pageTitle">股票风险体检</h2>
+        </div>
+        <p class="pool-note">最多 8 只股票，逐只重采、核价、检索资讯并调用 DeepSeek</p>
       </div>
 
       <form id="analysisForm" class="analysis-form">
@@ -39,7 +95,7 @@
             <option value="250">250 个交易日</option>
           </select>
         </label>
-        <button class="primary-button" id="analyzeButton" type="submit">开始智能研判</button>
+        <button class="primary-button" id="analyzeButton" type="submit">生成研究报告</button>
       </form>
     </section>
 
@@ -61,7 +117,7 @@
     <section id="emptyState" class="empty-state">
       <span class="empty-index">01</span>
       <div>
-        <h2>等待一次风险体检</h2>
+        <h2>等待一次研究报告</h2>
         <p>当前没有正在查看的研判结果。</p>
       </div>
     </section>
@@ -96,6 +152,34 @@
         <p id="briefFallback" class="inline-alert" hidden></p>
       </section>
 
+      <section class="report-section" aria-labelledby="reportTitle">
+        <header class="section-head detail-head">
+          <div>
+            <span class="eyebrow">INDICATOR REPORT</span>
+            <h2 id="reportTitle">个股研究报告</h2>
+          </div>
+          <div id="stockTabs" class="stock-tabs" role="tablist" aria-label="选择个股"></div>
+        </header>
+
+        <div id="reportIdentity" class="report-identity"></div>
+
+        <div class="report-block">
+          <header class="report-block-head">
+            <h3>AI 研究链</h3>
+            <span class="quiet-badge">可复现流程</span>
+          </header>
+          <ol id="researchChain" class="research-chain"></ol>
+        </div>
+
+        <div class="report-block">
+          <header class="report-block-head">
+            <h3>指标明细</h3>
+            <span class="quiet-badge">数值由 Python 计算</span>
+          </header>
+          <div id="indicatorTable" class="indicator-table"></div>
+        </div>
+      </section>
+
       <section class="stocks-section" aria-labelledby="stocksTitle">
         <header class="section-head">
           <div>
@@ -123,6 +207,17 @@
         <div id="detailContent" class="detail-content"></div>
       </section>
 
+      <section class="design-section" aria-labelledby="designTitle">
+        <header class="section-head">
+          <div>
+            <span class="eyebrow">RESEARCH DESIGN</span>
+            <h2 id="designTitle">后续建模与组合风控</h2>
+          </div>
+          <span class="quiet-badge">交接给建模同学</span>
+        </header>
+        <dl id="researchDesign" class="design-grid"></dl>
+      </section>
+
       <section class="audit-footer" aria-label="研判记录">
         <div>
           <span>研判编号</span>
@@ -139,7 +234,7 @@
       </section>
     </section>
 
-    <p class="disclaimer">课程研究用途，不构成投资建议或交易指令。</p>
+    <p class="disclaimer">课程研究用途，不构成投资建议或交易指令。AI 负责编排、整理与解读，数值与规则由可复现代码计算。</p>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

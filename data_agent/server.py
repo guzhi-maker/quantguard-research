@@ -70,7 +70,7 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/overview":
                 client = DeepSeekClient()
-                runs = self._service().store.list_runs(limit=12)
+                runs = self._service().store.list_run_summaries(limit=12)
                 self._send_json(
                     {
                         "agent": {
@@ -89,7 +89,7 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/runs":
                 limit = int((query.get("limit") or ["30"])[0])
-                self._send_json({"items": self._service().store.list_runs(limit)})
+                self._send_json({"items": self._service().store.list_run_summaries(limit)})
                 return
             if parsed.path == "/api/audits":
                 limit = int((query.get("limit") or ["20"])[0])

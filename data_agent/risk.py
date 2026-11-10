@@ -284,6 +284,286 @@ def _news_signals(items: list[dict]) -> tuple[list[str], list[str]]:
     return severe, moderate
 
 
+def _fmt_number(value: Any, digits: int = 2, suffix: str = "") -> str:
+    number = _number(value)
+    if number is None:
+        return "—"
+    return f"{number:,.{digits}f}{suffix}"
+
+
+def _fmt_pct(value: Any, digits: int = 2) -> str:
+    number = _number(value)
+    if number is None:
+        return "—"
+    return f"{number:+.{digits}%}"
+
+
+def build_indicator_details(
+    metrics: dict,
+    validation: dict,
+    intelligence: dict,
+    quote: dict | None = None,
+) -> list[dict]:
+    """Explain every reported indicator: value, formula, meaning, usage and source."""
+    quote = quote or {}
+    cross = validation.get("cross_source") or {}
+    news_items = (intelligence.get("news") or []) + (
+        intelligence.get("announcements") or []
+    )
+    severe, moderate = _news_signals(news_items)
+    price_source = str(quote.get("source") or "公开实时行情")
+    history_source = "公开前复权日线（东方财富优先，腾讯/新浪回退）"
+
+    def item(
+        key: str,
+        label: str,
+        value: Any,
+        display: str,
+        formula: str,
+        meaning: str,
+        usage: str,
+        source: str,
+        window: str,
+    ) -> dict:
+        return {
+            "key": key,
+            "label": label,
+            "value": value,
+            "display": display,
+            "formula": formula,
+            "meaning": meaning,
+            "usage": usage,
+            "source": source,
+            "window": window,
+        }
+
+    details = [
+        item(
+            "latest_price",
+            "最新价",
+            metrics.get("latest_price"),
+            _fmt_number(metrics.get("latest_price"), 2, " 元"),
+            "实时行情最新成交价；实时行情缺失时回退到最后一条日线收盘价",
+            "市场当前对该股票形成的边际价格，是计算收益、均线与回撤的基准",
+            "作为前视收益标签的定价基准；建模时要与财报因子保持同一复权与时点口径",
+            price_source,
+            "最新交易日",
+        ),
+        item(
+            "change_1d",
+            "1 日收益",
+            metrics.get("change_1d"),
+            _fmt_pct(metrics.get("change_1d")),
+            "最新价 / 前一交易日收盘价 - 1",
+            "单日价格变动的方向和幅度，反映短期冲击与情绪",
+            "可作为日频收益标签或短周期反转/动量因子的输入；需按交易日对齐",
+            history_source,
+            "1 个交易日",
+        ),
+        item(
+            "return_5d",
+            "5 日收益",
+            metrics.get("return_5d"),
+            _fmt_pct(metrics.get("return_5d")),
+            "最新价 / 5 个交易日前收盘价 - 1",
+            "约一周的价格动量，平滑了单日噪声",
+            "适合做周频动量因子；建模前做横截面去极值与标准化",
+            history_source,
+            "5 个交易日",
+        ),
+        item(
+            "return_20d",
+            "20 日收益",
+            metrics.get("return_20d"),
+            _fmt_pct(metrics.get("return_20d")),
+            "最新价 / 20 个交易日前收盘价 - 1",
+            "约一个月的趋势表现，是常用的中期动量特征",
+            "可作为月度动量因子，与未来 5/20 日收益做因子检验和分层回测",
+            history_source,
+            "20 个交易日",
+        ),
+        item(
+            "volatility_20_annualized",
+            "20 日年化波动率",
+            metrics.get("volatility_20_annualized"),
+            _fmt_pct(metrics.get("volatility_20_annualized")),
+            "近 20 个日收益率的标准差 × √252",
+            "近期收益的不确定性与风险水平，数值越高价格越不稳定",
+            "用于组合风险预算、波动率目标和仓位约束；也可作为风险因子做分层检验",
+            history_source,
+            "20 个交易日",
+        ),
+        item(
+            "drawdown_20d",
+            "20 日最大回撤",
+            metrics.get("drawdown_20d"),
+            _fmt_pct(metrics.get("drawdown_20d")),
+            "近 20 个交易日内，任一峰值之后的最差区间跌幅",
+            "衡量短期下行风险与持有体验，负数越大表示回撤越深",
+            "可作为回撤惩罚项或风险过滤条件；与收益标签分开评估，避免重复计算风险",
+            history_source,
+            "20 个交易日",
+        ),
+        item(
+            "drawdown_60d",
+            "60 日最大回撤",
+            metrics.get("drawdown_60d"),
+            _fmt_pct(metrics.get("drawdown_60d")),
+            "近 60 个交易日内，任一峰值之后的最差区间跌幅",
+            "衡量中期回撤深度，可区分短期噪声与持续下行",
+            "可用于构造中期风险状态变量，作为组合再平衡的辅助条件",
+            history_source,
+            "60 个交易日",
+        ),
+        item(
+            "ma20",
+            "20 日均线",
+            metrics.get("ma20"),
+            _fmt_number(metrics.get("ma20"), 2, " 元"),
+            "最近 20 个交易日收盘价的算术平均",
+            "短期价格中枢，用于平滑日常波动",
+            "可作为趋势基准；建模时通常使用价格相对均线的偏离而不是均线绝对值",
+            history_source,
+            "20 个交易日",
+        ),
+        item(
+            "ma60",
+            "60 日均线",
+            metrics.get("ma60"),
+            _fmt_number(metrics.get("ma60"), 2, " 元"),
+            "最近 60 个交易日收盘价的算术平均",
+            "中期价格中枢，用于识别更持续的趋势变化",
+            "与 20 日均线交叉可构造趋势状态特征；需做时间序列切分避免未来信息泄漏",
+            history_source,
+            "60 个交易日",
+        ),
+        item(
+            "distance_ma20",
+            "偏离 20 日均线",
+            metrics.get("distance_ma20"),
+            _fmt_pct(metrics.get("distance_ma20")),
+            "最新价 / 20 日均线 - 1",
+            "当前价格相对短期中枢的偏离程度，正值表示站上均线",
+            "可作为短期趋势/超买超卖特征；建议按行业做横截面标准化",
+            history_source,
+            "20 个交易日",
+        ),
+        item(
+            "distance_ma60",
+            "偏离 60 日均线",
+            metrics.get("distance_ma60"),
+            _fmt_pct(metrics.get("distance_ma60")),
+            "最新价 / 60 日均线 - 1",
+            "当前价格相对中期中枢的偏离程度，正值表示中期趋势偏强",
+            "可作为中期趋势特征；与波动率、成交量组合做交互项检验",
+            history_source,
+            "60 个交易日",
+        ),
+        item(
+            "volume_ratio",
+            "成交量比",
+            metrics.get("volume_ratio"),
+            _fmt_number(metrics.get("volume_ratio"), 2, " 倍"),
+            "最新成交量 / 前 20 个交易日平均成交量",
+            "衡量交易活跃度是否异常，数值越高说明当前换手相对放大",
+            "可作为流动性/异动特征，与价格方向组合成放量上涨或放量下跌规则",
+            history_source,
+            "1 日 vs 20 日均量",
+        ),
+        item(
+            "price_gap_pct",
+            "双源核价偏差",
+            cross.get("price_gap_pct"),
+            _fmt_pct(cross.get("price_gap_pct")),
+            "|东方财富价 - 腾讯价| / 两源均价；双方涨跌停或字段缺失时不比较",
+            "衡量两个独立行情源的报价一致性，是数据可信度的直接证据",
+            "作为数据质量门控：偏差超阈值先复核再进入特征工程，不直接作为 alpha 因子",
+            "东方财富日行情 + 腾讯证券实时行情",
+            "同一时点",
+        ),
+        item(
+            "news_signal",
+            "资讯信号",
+            len(severe) + len(moderate),
+            f"重大 {len(severe)} 项 / 关注 {len(moderate)} 项",
+            "对近 30 天新闻与公告标题做词典匹配，统计严重与中等风险词命中数",
+            "反映文本信息中的事件线索数量；命中不等于事实成立，也不能单独推导收益",
+            "可作为事件/情绪因子的候选特征；建模型前需人工抽样核验并做时间衰减",
+            "东方财富新闻与公告公开检索",
+            "近 30 天",
+        ),
+    ]
+    return details
+
+
+def build_research_steps(
+    validation: dict,
+    metrics: dict,
+    intelligence: dict,
+    cross_source: dict,
+) -> list[dict]:
+    """Describe the reproducible pipeline that produced this stock report."""
+    cross_status = str(cross_source.get("status") or "unavailable")
+    cross_label = {
+        "verified": "双源核价一致",
+        "mismatch": "双源价格偏差超阈值",
+        "unavailable": "双源核价不可用",
+    }.get(cross_status, cross_status)
+    news_count = len(intelligence.get("news") or [])
+    announcement_count = len(intelligence.get("announcements") or [])
+    validation_status = str(validation.get("status") or "warn")
+    return [
+        {
+            "step": 1,
+            "actor": "采集器",
+            "action": "重新抓取个股行情",
+            "input": "股票代码、历史窗口",
+            "output": f"{metrics.get('rows') or 0} 行日线，最新日期 {metrics.get('latest_history_date') or '—'}",
+            "status": "done",
+        },
+        {
+            "step": 2,
+            "actor": "核价机器人",
+            "action": "东方财富与腾讯双源交叉核价",
+            "input": "同一时点两源最新价",
+            "output": cross_label,
+            "status": "done" if cross_status == "verified" else "warn",
+        },
+        {
+            "step": 3,
+            "actor": "Python 指标引擎",
+            "action": "按固定公式计算收益、波动、回撤、均线与量比",
+            "input": "复权日线收盘价与成交量",
+            "output": "14 项可复现指标（数值由代码计算，DeepSeek 不参与生成）",
+            "status": "done",
+        },
+        {
+            "step": 4,
+            "actor": "规则引擎",
+            "action": "按波动、回撤、均线、量价和数据质量规则打分",
+            "input": "指标数值 + 核价结果",
+            "output": f"数据核对 {validation_status}，发现 {validation.get('issue_count', 0)} 个数据问题",
+            "status": "done" if validation_status == "pass" else "warn",
+        },
+        {
+            "step": 5,
+            "actor": "资讯机器人",
+            "action": "检索实时新闻与公司公告并做风险词匹配",
+            "input": "股票名称、代码、近 30 天公开资讯",
+            "output": f"{news_count} 条新闻、{announcement_count} 条公告",
+            "status": "done" if (news_count or announcement_count) else "warn",
+        },
+        {
+            "step": 6,
+            "actor": "DeepSeek",
+            "action": "读取结构化证据并撰写研究简报",
+            "input": "指标、核价、规则预警与新闻标题",
+            "output": "中文研究解读；不得编造数值，不得把标题外推为确定结论",
+            "status": "done",
+        },
+    ]
+
+
 def assess_stock_risk(
     symbol: str,
     name: str,
@@ -455,6 +735,12 @@ def assess_stock_risk(
         },
         "alerts": alerts,
         "intelligence": intelligence,
+        "indicator_details": build_indicator_details(
+            metrics, validation, intelligence, quote
+        ),
+        "research_steps": build_research_steps(
+            validation, metrics, intelligence, cross_source
+        ),
     }
 
 

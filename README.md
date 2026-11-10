@@ -1,91 +1,30 @@
-# QuantGuard 数据采集智能体
+# QuantGuard 量化研究数据台
 
-当前小组任务聚焦成员 A 的交付：**发现公开数据源、调用真实行情接口、由 DeepSeek 智能体自主选择工具、保存可追溯的原始数据快照**。本阶段不负责后续特征工程、模型训练、组合优化和研究报告。
-
-```text
-自然语言任务 -> DeepSeek 工具规划 -> 公开接口探测
--> 股票池/行情/日线抓取 -> 原始 CSV -> manifest + SHA256 -> 交接
-```
-
-## 当前版本如何启动
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe main.py web --port 8787
-```
-
-浏览器打开 `http://127.0.0.1:8787/`。默认页面是“数据采集工作台”，包含 DeepSeek 任务、固定流程采集、数据源探测、任务轨迹、采集记录和原始 CSV 浏览。
-
-将 `.env.example` 复制为本地 `.env` 并填写：
-
-```dotenv
-DEEPSEEK_API_KEY=your-deepseek-key-here
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
-```
-
-`.env` 已被 Git 忽略。未配置密钥时，固定流程采集仍可使用；智能体入口会明确报告未配置，不会用规则逻辑冒充 DeepSeek。
-
-## 数据采集交付物
-
-每次采集写入独立编号，不覆盖历史快照：
+面向“数据挖掘与机器学习”课程期末项目的研究型应用。当前仓库重点交付成员 A 的第一阶段：用 AI 机器人编排真实数据采集，形成可供后续建模的千股级原始数据池，并给出可解释的个股研究报告示例。
 
 ```text
-data/raw/<run_id>/market_daily.csv
-data/raw/<run_id>/market_quotes.csv
-data/raw/<run_id>/universe.csv
-data/manifests/<run_id>.json
+公开行情/新闻/公告
+-> 东方财富、腾讯、新浪接口
+-> 断点续采与双源核价
+-> 原始 CSV + manifest + SHA256
+-> Python 指标计算与规则预警
+-> DeepSeek 结构化解读
+-> 千股数据池与建模交接说明
 ```
 
-manifest 记录请求参数、来源、复权口径、行情起止日期、行数、失败股票、文件 SHA256、质量计数和智能体工具调用轨迹。原始文件只追加，不覆盖；发现问题应重新抓取或由 B 建立新的治理版本。
+应用定位是课程研究工具，不连接券商、不发送交易指令，也不承诺收益。
 
-## 数据源与约束
+## 当前能力
 
-- 东方财富：股票池、证券搜索、实时行情、历史前复权日线。
-- 腾讯证券：实时行情和历史日线回退。
-- 新浪财经：股票池和历史日线回退。
-- 腾讯、新浪成交额可能是按成交量与价格估算；每行 `source` 会明确标注。
-- 新浪复权口径无法稳定确认时标记为 `unverified`，交由数据治理阶段复核。
-- 当前股票池是抓取时点的流动性快照，不是历史成分股。
-
-## 采集 API
-
-- `GET /api/overview`：智能体状态、数据源注册表和最近快照。
-- `POST /api/sources/probe`：真实探测公开数据源。
-- `POST /api/search`：按代码或名称搜索证券。
-- `POST /api/jobs`：创建 `agent` 或 `fixed` 采集任务。
-- `GET /api/jobs/{job_id}`：读取进度、事件和结果。
-- `GET /api/runs/{run_id}`：读取 manifest。
-- `GET /api/runs/{run_id}/rows?view=daily`：分页浏览原始数据。
-- `GET /api/runs/{run_id}/csv?view=daily`：导出完整 CSV。
-
-## 测试
-
-```powershell
-$env:PYTHONPATH=(Resolve-Path '.pytest-deps').Path
-$env:LOKY_MAX_CPU_COUNT='1'
-.\.venv\Scripts\python.exe -m pytest -q
-```
-
-采集模块测试覆盖参数校验、原始 CSV、manifest、SHA256、来源血缘、分页、DeepSeek 工具循环和 HTTP API。
-
-架构、答辩讲解和三分钟演示流程见 [数据采集工作台说明](docs/data-agent-workbench.md)。
-
----
-
-以下内容保留作为后续研究模块说明。该模块不属于成员 A 当前交付，也不是本轮默认页面。
-
-# QuantGuard 机器学习量化研究台
-
-面向数据挖掘与机器学习课程期末项目的本地量化研究应用。它把一次 A 股横截面研究拆成可检查的完整链路：
-
-```text
-行情收集 -> 数据清洗 -> 探索性分析 -> 特征与标签 -> 时间序列验证
--> 机器学习模型 -> 样本外滚动预测 -> 组合与成本 -> 风控与研究报告
-```
-
-项目定位是研究工具，不连接券商，不发送交易指令，也不承诺收益。应用界面默认且仅展示公开证券行情的真实研究结果，离线数据只保留给自动化测试和开发调试。
+- **千股数据池**：股票池上限 1,500 只，默认采集 1,200 只 × 250 个交易日，单快照可形成约 30 万条证券-日记录。
+- **真实网络数据**：东方财富优先，腾讯与新浪按接口回退；每行保留 `source`、`adjustment` 和 `fetched_at`。
+- **断点续采**：命令行采集器逐只写入 JSONL 与 `state.json`，网络中断后可继续，不会丢掉整批数据。
+- **数据质量核验**：统计股票数、证券-日行数、日期范围、失败数、重复主键、非法价格和缺失字段。
+- **双源核价**：东方财富与腾讯实时价格交叉检查，偏差超阈值时先进入复核，不把单一报价当作事实。
+- **AI 研究链**：页面逐股展示“重采行情 -> 双源核价 -> Python 指标 -> 规则打分 -> 新闻公告 -> DeepSeek 解读”六步流程。
+- **14 项可解释指标**：每项都展示当前值、公式与输入、衡量含义、后续建模用法和证据来源。
+- **资讯与风险提醒**：检索近 30 天新闻和公司公告，用风险词典标记待核验线索；标题不能被模型外推为确定结论。
+- **建模交接**：明确未来 5/20 日收益标签、时间切分、泄漏检查、IC/RankIC、分层回测、组合约束和成本敏感性。
 
 ## 快速开始
 
@@ -94,134 +33,139 @@ Windows PowerShell：
 ```powershell
 cd C:\Users\25187\Desktop\量化
 
-# 首次使用时创建环境
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-
-# 启动旧研究台（非成员 A 当前交付）
-.\.venv\Scripts\python.exe main.py research-web --port 8788
+.\.venv\Scripts\python.exe run_server.py --port 8789
 ```
 
-浏览器打开 `http://127.0.0.1:8788/`。旧研究台会从公开证券行情接口运行一组 `80 只股票 x 500 个交易日` 的行情研究，不属于成员 A 当前交付。
+浏览器打开 `http://127.0.0.1:8789/`。
 
-如果本机已有可用的虚拟环境，也可以直接启动：
+在本地 `.env` 中配置 DeepSeek：
+
+```dotenv
+DEEPSEEK_API_KEY=your-deepseek-key-here
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+`.env` 已被 Git 忽略。未配置密钥时，行情采集、核价、指标计算和规则预警仍可运行；页面会明确显示 DeepSeek 未配置，不会用模板冒充模型输出。
+
+## 采集千股数据
+
+### 页面采集
+
+在“研究数据池”中选择股票数量和历史交易日，点击“采集数据池”。页面会显示任务进度、事件、最终快照编号、行数、日期范围和失败数，并提供日线、行情、股票池 CSV 与 manifest 下载。
+
+公开接口的流动性股票池经去重、过滤 ST/退市后，实际数量可能略少于请求值。例如请求 1,200 只时，实际可能得到 1,195 只；验收标准是成功股票数不少于 1,000、记录可追溯且失败项明确。
+
+### 命令行采集与断点续采
 
 ```powershell
-.\.venv\Scripts\python.exe main.py research-web --port 8788
+.\.venv\Scripts\python.exe data_agent\collect_dataset.py --universe-size 1200 --history-days 250
 ```
 
-## 当前能力
+如果网络中断：
 
-### 数据模式
+```powershell
+.\.venv\Scripts\python.exe data_agent\collect_dataset.py --staging data\raw\_staging\<staging目录> --history-days 250
+```
 
-- **实时行情**：优先使用东方财富公开行情；接口不可用时自动切换新浪财经流动性快照，并依次尝试腾讯、新浪历史日行情。
-- **数据口径**：页面显示本次实际使用的数据源。腾讯历史成交额按成交量 × 收盘价估算，界面与报告会明确标注。
-- **数据底稿**：页面展示本次研究的原始行情与建模样本，可筛选、翻页并导出完整 CSV。
-- **离线数据**：仅用于自动化测试和开发调试，不在生产界面中提供切换入口。
+采集完成后自动生成不可覆盖的正式快照：
 
-### 机器学习研究
+```text
+data/raw/<run_id>/market_daily.csv
+data/raw/<run_id>/market_quotes.csv
+data/raw/<run_id>/universe.csv
+data/manifests/<run_id>.json
+```
 
-- 17 个仅使用信号日 `t` 及之前行情的特征。
-- 标签为未来 `5/10/20` 日横截面相对收益，默认 `20` 日。
-- 开发期使用 3 个按时间排列的验证折。
-- 比较多因子基线、Ridge、随机森林和梯度提升。
-- 通过开发期 Rank IC 与 R² 约束自动选择模型，留出期不参与调参。
-- 留出期每 20 个交易日扩展重训，保留训练区间、标签截止日和样本数日志。
-- 报告 MAE、RMSE、样本外 R²、Rank IC、ICIR、IC 胜率和 Top-20% 捕获率。
-- 展示验证期与留出期差异。留出期失效时直接标记“不支持升级”，不把回测净值包装成有效策略。
+`data/raw/`、`data/audits/` 和 `.env` 不应提交到 Git。仓库只保存采集程序、契约、测试和研究说明；数据文件通过本地快照或课程网盘交接。
 
-### 组合、成本与风控
+当前正式快照 `RAW-20261110-124549-780A2D` 已通过独立复核：1,188 只股票、292,173 条证券-日记录、14 条失败记录、0 个重复主键、0 行非法价格。运行以下命令可重新核对文件哈希、行数和日期范围：
 
-- 模型分数转换为目标持仓，按逆波动分配权重。
-- 单票上限 10%，行业上限可调，默认 22%。
-- 按 A 股 100 股整手取整，买不起一手的资金保留为现金。
-- 计入比例佣金、单笔最低佣金增量、过户费、卖出印花税、滑点和冲击成本。
-- 展示目标持仓股数、实际金额、退出天数、冲击成本和容量压力。
-- 可把目标持仓同步到独立观察组合，编辑权重后执行单独的组合风控复核。
+```powershell
+.\.venv\Scripts\python.exe tools\verify_snapshot.py RAW-20261110-124549-780A2D
+```
 
-### 研究档案与课堂展示
+## 个股研究报告
 
-- 数据审计、特征工程、样本与标签、模型训练、样本外回测五个研究分区。
-- 最近 6 次实验摘要保存在浏览器本地，可重新载入参数复算。
-- Markdown 研究报告和 JSON 原始结果一键导出。
-- 五步课堂导览覆盖问题、数据、特征、模型、组合与风险。
+“股票风险体检”默认用 `600519,300750,601318` 作为课堂示例。每次报告都会重新抓取真实行情，并把结果保存为独立 `AUDIT-*` 文件。
 
-### 完整数据底稿
+报告包含：
 
-每次研究运行都会保存本次实验实际使用的两份数据快照：
+1. 个股当前风险等级与数据核对状态。
+2. 六步 AI 研究链，逐步说明输入、输出和执行者。
+3. 14 项指标明细，包括最新价、1/5/20 日收益、20 日年化波动率、20/60 日最大回撤、20/60 日均线、均线偏离、成交量比、双源核价偏差和资讯信号。
+4. 新闻与公告证据、数据质量问题和原始 CSV 链接。
+5. DeepSeek 中文研究简报，以及给建模同学的研究设计和组合风控约定。
 
-- **原始行情面板**：日期、代码、股票名称、行业、收盘价、成交额和成交量，是清洗后进入特征工程的完整日期 × 股票面板。
-- **建模样本矩阵**：信号日、代码、名称、行业、17 个特征、未来超额标签 `future_excess` 和标签结束日。
+数值边界：
 
-数据审计页按最新交易日优先展示，可按代码、名称、行业和日期范围筛选，并按每页 50 行浏览。原始行情与建模样本都可以下载完整 CSV，不受当前筛选和分页影响。`future_excess` 与 `label_end_date` 只用于监督学习目标和评估，不属于特征。快照保存在服务进程内，最近保留 3 次运行；服务重启后需要重新运行研究。
+- Python 负责价格、收益、波动率、回撤、均线、量比和规则分数。
+- DeepSeek 负责整理证据、解释指标和撰写简报，不能补写数值或捏造事实。
+- 新闻标题只作为线索；结论必须回到公告原文、行情和财务证据复核。
 
-## 研究方法摘要
+## 数据契约
 
-完整方法与公式见 [docs/quant-ml-research-methods.md](docs/quant-ml-research-methods.md)。
+日线主键为 `(date, symbol)`，核心字段：
 
-核心防泄漏规则：
+```text
+date, symbol, name, industry, open, high, low, close,
+volume, amount, amplitude, change_pct, change, turnover,
+source, adjustment, fetched_at
+```
 
-1. 特征只用信号日及以前的收盘价、成交量、成交额和市场截面信息。
-2. 训练样本必须满足 `label_end_date <= 信号日`，防止未来窗口进入训练。
-3. 缺失填充、标准化和行业 One-Hot 编码只在每个训练折内拟合。
-4. 开发期与留出期按日期顺序切分，不打乱样本。
-5. 留出期开始前冻结模型类型和超参数。
-6. 组合收益来自滚动样本外预测，不用全样本拟合分数回填历史。
+复权标记：
 
-## 默认参数
+- `qfq`：接口明确返回前复权数据。
+- `unverified`：复权口径无法稳定确认，交给数据治理同学复核。
 
-| 参数 | 默认值 | 说明 |
-| --- | --- | --- |
-| 研究资金 | 5 万元 | 首次打开的个人研究示例，可调整 |
-| 股票池上限 | 80 只 | 控制课堂运行时长 |
-| 历史窗口 | 500 个交易日 | 覆盖特征预热与时间外验证 |
-| 目标持仓 | 8 只 | 受整手、容量和行业约束 |
-| 标签期限 | 未来 20 日超额 | 可切换 5、10、20 日 |
-| 模型 | 自动选择 | 可指定基线、Ridge、随机森林或梯度提升 |
-| 调仓 | 月末 | 可切换周末 |
-| ADV 参与率 | 5% | 容量与冲击成本参数 |
-| 行业上限 | 22% | 组合行业暴露上限 |
+manifest 记录请求参数、来源、复权口径、行数、日期范围、失败股票、质量计数、文件 SHA256、来源血缘和已知限制。原始快照只追加，不覆盖；需要清洗时由成员 B 建立新的治理版本。
 
-默认实时研究在当前机器上约需 1 到 2 分钟，具体取决于公开行情接口的响应速度。接口失败时页面会保留上一份真实结果并明确提示重试。
+## 建模交接
+
+数据池面向横截面监督学习，推荐约定：
+
+- **标签**：未来 5 日和 20 个交易日收益，或是否跑赢行业内中位数。
+- **特征**：收益、波动、回撤、均线偏离、量比、核价偏差、资讯信号及行业/流动性控制变量。
+- **切分**：按日期切分训练、验证和样本外区间，禁止随机打乱；重叠标签窗口之间设置间隔。
+- **防泄漏**：特征只使用信号日及以前可得的信息；标签从下个交易日开始计算；检查复权、停牌和公告发布时间。
+- **评估**：同时报告 IC/RankIC、分层收益、换手率、最大回撤、样本外稳定性和交易成本敏感性。
+- **组合**：预测分数只用于横截面排序、风险过滤或权重约束，并结合行业中性、单票上限、波动率目标和现金约束。
 
 ## API
 
-### 运行研究
+- `GET /api/overview`：智能体状态、数据源注册表和最近快照摘要。
+- `GET /api/runs`：最近原始快照摘要，不返回大体量 trace。
+- `GET /api/runs/{run_id}`：读取完整 manifest。
+- `GET /api/runs/{run_id}/rows?view=daily`：分页浏览日线、行情或股票池。
+- `GET /api/runs/{run_id}/csv?view=daily`：导出完整 CSV。
+- `POST /api/jobs`：创建 `fixed` 数据池采集、`agent` 智能体采集或 `risk` 研究报告任务。
+- `GET /api/jobs/{job_id}`：读取进度、事件和结果。
+- `GET /api/audits`：列出历史研究报告。
+- `GET /api/audits/{audit_id}`：读取一份完整研究报告。
 
-`POST /api/lab`
+## 项目结构
 
-```json
-{
-  "data_mode": "live",
-  "capital": 50000,
-  "universe_size": 80,
-  "history_days": 500,
-  "top_n": 8,
-  "label_horizon": 20,
-  "rebalance": "monthly",
-  "model": "auto",
-  "exit_days": 5,
-  "participation_rate": 0.05,
-  "industry_cap": 0.22
-}
+```text
+data_agent/
+├── agent.py             # DeepSeek function calling 与工具循环
+├── catalog.py           # 数据源注册表
+├── collect_dataset.py   # 千股断点续采 CLI
+├── news_client.py       # 新闻与公告检索
+├── risk.py              # 指标、核价、规则预警与研究链
+├── risk_service.py      # 个股研究报告流水线
+├── service.py           # 固定/智能采集任务编排
+├── store.py             # CSV、manifest、哈希和分页读取
+├── server.py            # 本地 HTTP API
+└── static/              # 研究数据台前端
+webapp/
+├── market_client.py     # 东方财富、腾讯、新浪真实行情连接器
+└── ...
+docs/
+└── data-agent-workbench.md
+tests/
 ```
-
-### 股票搜索与风控
-
-- `GET /api/search?q=600519&data_mode=demo`
-- `POST /api/risk`，请求体中包含 `data_mode` 和观察组合持仓。
-- `GET /api/stock?symbol=600519&days=252&data_mode=live`
-
-### 完整数据浏览与下载
-
-- `GET /api/dataset/{dataset_id}?view=raw&offset=0&limit=50`
-- `GET /api/dataset/{dataset_id}?view=model&offset=0&limit=50&q=银行&date_from=2025-01-01&date_to=2025-12-31`
-- `GET /api/dataset/{dataset_id}/csv?view=raw`
-- `GET /api/dataset/{dataset_id}/csv?view=model`
-
-分页接口单次最多返回 500 行；CSV 接口返回该视图的完整数据。`dataset_id` 由 `POST /api/lab` 的 `meta.dataset_id` 返回。无效视图或分页参数返回 400，服务重启或旧快照被淘汰后返回 404。
-
-所有非法参数返回中文错误说明。实时行情失败返回可恢复错误，不会伪造替代价格。
 
 ## 测试
 
@@ -229,46 +173,17 @@ python -m venv .venv
 $env:PYTHONPATH=(Resolve-Path '.pytest-deps').Path
 $env:LOKY_MAX_CPU_COUNT='1'
 .\.venv\Scripts\python.exe -m pytest -q
+node --check data_agent\static\app.js
+node tools\check_api.mjs
+node tools\check_layout.mjs
 ```
 
-当前自动化测试覆盖数据清洗、因子时点、标签隔离、模型对照、成本可加性、整手执行、容量压力、API、组合风控和图表数据契约。
-
-浏览器验收使用 DOM、接口、文本、尺寸与控制台信息，不依赖截图：
-
-- `390px`、`680px`、`1280px` 无整页横向溢出。
-- 移动端可见交互控件最小高度 44px。
-- 四个主导航、五个研究分区、五步导览、观察组合、独立风控和两种导出均可用。
-- 数据审计页可以在原始行情和建模样本之间切换，筛选、翻页并下载完整 CSV。
-
-## 目录
-## 三人协作
-
-团队分工、交接物和里程碑见 [docs/team-collaboration.md](docs/team-collaboration.md)，数据字段与实验接口见 [docs/data-contract.md](docs/data-contract.md)。GitHub Issue 和 Pull Request 模板已放在 `.github/`，大文件、密钥和导出文件不应提交到仓库。
-
-
-```text
-量化/
-├── webapp/
-│   ├── demo_data.py        # 确定性离线行情
-│   ├── market_client.py    # 多源公开行情、搜索与历史数据回退
-│   ├── ml_research.py      # 特征、标签、模型、滚动训练
-│   ├── quant_lab.py        # 数据审计、组合、成本与回测
-│   ├── risk_advisor.py     # 独立组合风控
-│   ├── server.py           # HTTP API 与静态页面
-│   └── static/             # 研究终端前端
-├── config/                 # 费用、回测与风控配置
-├── tests/                  # 自动化测试
-├── docs/                   # 研究方法和设计契约
-├── main.py                 # 命令行与 Web 入口
-└── requirements.txt
-```
+测试覆盖参数校验、原始 CSV、manifest、SHA256、来源血缘、分页、DeepSeek 工具循环、双源核价、14 项指标解释、六步研究链、新闻失败记录和 HTTP API。
 
 ## 研究边界
 
-- 当前股票池使用当前流动性筛选，存在幸存者偏差。
-- 行业分类不是严格历史时点快照。
-- 重叠的 20 日标签窗口会降低样本独立性。
-- 公开行情接口可能存在延迟；腾讯或新浪历史成交额是估算值，不等同于交易所披露成交额。
-- 离线演示保持仅用于测试和开发，不进入用户可见研究界面。
-- 整手、冲击成本和真实成交之间仍可能存在差异。
-- 历史回测结果不代表未来收益，不构成投资建议。
+- 当前股票池是抓取时点的流动性快照，不是历史时点成分股，存在幸存者偏差。
+- 行业分类不是严格的历史快照，公开接口可能有延迟、限流或字段调整。
+- 腾讯和新浪的成交额在部分回退场景下可能由成交量与价格估算，必须结合 `source` 使用。
+- 20 日重叠标签会降低样本独立性，模型验证必须按时间切分。
+- 风险评分和新闻关键词只用于课程研究，不构成投资建议或交易指令。

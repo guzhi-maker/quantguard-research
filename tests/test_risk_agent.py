@@ -89,6 +89,56 @@ def test_compute_market_metrics_and_cross_source_validation():
     assert mismatch["level"] in {"high", "critical"}
 
 
+def test_indicator_details_and_research_chain_are_explainable():
+    result = assess_stock_risk(
+        "600519",
+        "贵州茅台",
+        _quote(),
+        _daily_rows(),
+        _cross(),
+        {
+            "news": [
+                {
+                    "title": "公司发布经营数据公告",
+                    "summary": "业绩保持稳定",
+                    "published_at": "2026-11-09 10:00:00",
+                    "age_hours": 2,
+                    "media": "测试媒体",
+                    "url": "https://example.com/news",
+                }
+            ],
+            "announcements": [],
+        },
+    )
+    details = result["indicator_details"]
+    keys = {item["key"] for item in details}
+    assert {
+        "latest_price",
+        "return_20d",
+        "volatility_20_annualized",
+        "drawdown_60d",
+        "price_gap_pct",
+        "news_signal",
+    } <= keys
+    for item in details:
+        assert item["display"]
+        assert item["formula"]
+        assert item["meaning"]
+        assert item["usage"]
+        assert item["source"]
+
+    steps = result["research_steps"]
+    assert [item["actor"] for item in steps] == [
+        "采集器",
+        "核价机器人",
+        "Python 指标引擎",
+        "规则引擎",
+        "资讯机器人",
+        "DeepSeek",
+    ]
+    assert all(item["input"] and item["output"] for item in steps)
+
+
 def test_risk_assessment_uses_negative_news_and_drawdown():
     falling = _daily_rows(start=180.0, step=-1.0)
     intelligence = {
@@ -213,5 +263,7 @@ def test_risk_service_collects_verifies_news_and_persists_audit(tmp_path):
     assert result["brief"].startswith("总体结论")
     assert result["evidence"]["run_id"].startswith("RAW-")
     assert result["audit_id"].startswith("AUDIT-")
+    assert result["research_design"]["split"]
+    assert "未来 5 日" in result["research_design"]["labels"]
     assert (tmp_path / "audits" / f"{result['audit_id']}.json").exists()
     assert service.load_audit(result["audit_id"])["evidence"]["daily_rows"] == 60
