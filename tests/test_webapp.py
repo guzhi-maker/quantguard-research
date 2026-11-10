@@ -240,6 +240,7 @@ def test_quote_normalizes_eastmoney_percentage_fields(monkeypatch):
             "f127": "白酒Ⅱ",
             "f128": "贵州",
             "f129": "白酒",
+            "f86": 1794207600,
         }
     }
     monkeypatch.setattr(market_client, "_cached", lambda *_args, **_kwargs: payload)
@@ -252,6 +253,7 @@ def test_quote_normalizes_eastmoney_percentage_fields(monkeypatch):
     assert quote["turnover_rate"] == pytest.approx(0.0059)
     assert quote["pe"] == pytest.approx(21.52)
     assert quote["pb"] == pytest.approx(6.82)
+    assert quote["updated_at"] == "2026-11-09 15:00:00"
 
 
 def test_search_cleans_stock_names(monkeypatch):

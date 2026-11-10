@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+import pytest
+
 from data_agent.risk import assess_stock_risk, compute_market_metrics
 from data_agent.risk_service import RiskAnalysisService
 from data_agent.service import CollectionRequest
@@ -87,6 +89,22 @@ def test_compute_market_metrics_and_cross_source_validation():
     )
     assert mismatch["validation"]["status"] == "fail"
     assert mismatch["level"] in {"high", "critical"}
+
+
+def test_preopen_quote_does_not_duplicate_latest_close():
+    daily = _daily_rows()
+    latest_close = daily[-1]["close"]
+    quote = {
+        **_quote(price=latest_close),
+        "prev_close": daily[-2]["close"],
+        "updated_at": "2026-11-10 00:09:10",
+    }
+
+    metrics = compute_market_metrics(daily, quote=quote)
+
+    expected = latest_close / daily[-2]["close"] - 1.0
+    assert metrics["change_1d"] == pytest.approx(expected)
+    assert metrics["change_1d"] != pytest.approx(0.0)
 
 
 def test_indicator_details_and_research_chain_are_explainable():

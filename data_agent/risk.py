@@ -105,9 +105,30 @@ def compute_market_metrics(
             elif latest_day and quote_day and quote_day < latest_day:
                 pass
             else:
-                closes.append(live_price)
-                if live_volume and live_volume > 0:
-                    volumes.append(live_volume)
+                same_as_last = (
+                    closes
+                    and abs(live_price / closes[-1] - 1.0) < 1e-9
+                )
+                previous_close = _number(quote.get("prev_close"))
+                starts_new_session = (
+                    closes
+                    and previous_close is not None
+                    and abs(previous_close / closes[-1] - 1.0) < 1e-6
+                )
+                if starts_new_session:
+                    closes.append(live_price)
+                    if live_volume and live_volume > 0:
+                        volumes.append(live_volume)
+                elif same_as_last:
+                    # Some feeds stamp a pre-open quote with the fetch clock.
+                    # Do not append the latest close as a second trading day.
+                    closes[-1] = live_price
+                    if live_volume and live_volume > 0:
+                        volumes[-1] = live_volume
+                else:
+                    closes.append(live_price)
+                    if live_volume and live_volume > 0:
+                        volumes.append(live_volume)
     returns = [
         closes[index] / closes[index - 1] - 1.0
         for index in range(1, len(closes))

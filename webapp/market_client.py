@@ -8,6 +8,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 QUOTE_URL = "https://push2.eastmoney.com/api/qt/stock/get"
@@ -100,6 +101,19 @@ def _scaled(value: Optional[float], divisor: float = 100.0) -> Optional[float]:
 def _percentage(value: Optional[float]) -> Optional[float]:
     """Convert percentage fields such as 284 to the ratio 0.0284."""
     return _scaled(value, divisor=10000.0)
+
+
+def _china_timestamp(value: Any) -> Optional[str]:
+    try:
+        epoch = int(value)
+    except (TypeError, ValueError):
+        return None
+    if epoch <= 0:
+        return None
+    timestamp = datetime.fromtimestamp(
+        epoch, timezone(timedelta(hours=8))
+    )
+    return timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _clean_name(value: Any, fallback: str) -> str:
@@ -345,7 +359,7 @@ def _get_eastmoney_quote(symbol: str) -> dict:
     quote_id = to_quote_id(code)
     fields = (
         "f57,f58,f43,f44,f45,f46,f47,f48,f60,f116,f117,"
-        "f162,f167,f168,f169,f170,f127,f128,f129"
+        "f162,f167,f168,f169,f170,f127,f128,f129,f86"
     )
     url = f"{QUOTE_URL}?secid={quote_id}&fields={fields}"
     payload = _cached(f"quote:{code}", ttl=20, loader=lambda: _fetch_json(url))
@@ -373,7 +387,10 @@ def _get_eastmoney_quote(symbol: str) -> dict:
         "region": str(data.get("f128") or ""),
         "concepts": str(data.get("f129") or ""),
         "source": "东方财富",
-        "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "updated_at": (
+            _china_timestamp(data.get("f86"))
+            or time.strftime("%Y-%m-%d %H:%M:%S")
+        ),
     }
 
 
