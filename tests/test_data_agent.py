@@ -10,6 +10,7 @@ from data_agent.agent import DeepSeekAgent, DeepSeekClient
 from data_agent.server import create_server
 from data_agent.service import CollectorService, CollectionRequest
 from data_agent.store import RawRunStore
+from webapp import market_client
 
 
 class FakeGateway:
@@ -82,15 +83,23 @@ def test_collection_request_validation():
     assert request.symbols == ["600519", "000001"]
 
 
-def test_collection_request_supports_pool_of_5000():
+def test_collection_request_supports_expanded_limits():
     request = CollectionRequest.from_payload(
         {"universe_size": "5000", "history_days": "250"}
     )
     assert request.universe_size == 5000
     assert request.history_days == 250
+    request = CollectionRequest.from_payload(
+        {"universe_size": "5000", "history_days": "5000"}
+    )
+    assert request.history_days == 5000
     with pytest.raises(ValueError):
         CollectionRequest.from_payload(
             {"universe_size": 5001, "history_days": 250}
+        )
+    with pytest.raises(ValueError):
+        CollectionRequest.from_payload(
+            {"universe_size": 1000, "history_days": 5001}
         )
     with pytest.raises(ValueError):
         CollectionRequest.from_payload(
@@ -98,6 +107,25 @@ def test_collection_request_supports_pool_of_5000():
                 f"{index:06d}" for index in range(5001)
             ])}
         )
+
+
+def test_long_history_skips_truncated_tencent_fallback(monkeypatch):
+    def eastmoney_unavailable(*_args, **_kwargs):
+        raise market_client.MarketDataError("primary unavailable")
+
+    def tencent_must_not_run(*_args, **_kwargs):
+        pytest.fail("Tencent fallback must not truncate a 1000-day request")
+
+    def sina_long_history(_symbol, limit):
+        return [{"date": f"2020-01-{index + 1:02d}"} for index in range(limit)]
+
+    monkeypatch.setattr(market_client, "_get_eastmoney_history", eastmoney_unavailable)
+    monkeypatch.setattr(market_client, "_get_tencent_history", tencent_must_not_run)
+    monkeypatch.setattr(market_client, "_get_sina_history", sina_long_history)
+    market_client._CACHE.clear()
+
+    rows = market_client.get_history("600519", 1000)
+    assert len(rows) == 1000
 
 
 def test_run_summaries_omit_trace_but_keep_evidence(tmp_path):

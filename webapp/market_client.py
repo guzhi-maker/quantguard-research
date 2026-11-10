@@ -23,6 +23,7 @@ SINA_HISTORY_URL = "https://quotes.sina.cn/cn/api/json_v2.php/CN_MarketDataServi
 SEARCH_TOKEN = "D43BF722C8E33BDC906FB84D85E326E8"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) QuantGuard/1.0"
 MAX_UNIVERSE_SIZE = 5000
+MAX_HISTORY_DAYS = 5000
 
 _CACHE: dict[str, tuple[float, Any]] = {}
 _CACHE_LOCK = threading.Lock()
@@ -512,7 +513,7 @@ def get_quote_comparison(symbol: str) -> dict:
 
 def _get_eastmoney_history(symbol: str, days: int = 252) -> list[dict]:
     code = normalize_symbol(symbol)
-    limit = max(30, min(int(days), 500))
+    limit = max(30, min(int(days), MAX_HISTORY_DAYS))
     quote_id = to_quote_id(code)
     fields1 = "f1,f2,f3,f4,f5,f6"
     fields2 = "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61"
@@ -651,27 +652,38 @@ def _get_sina_history(symbol: str, limit: int) -> list[dict]:
 def get_history(symbol: str, days: int = 252) -> list[dict]:
     """Load daily bars with Eastmoney, Tencent, then Sina fallback."""
     code = normalize_symbol(symbol)
-    limit = max(30, min(int(days), 500))
+    limit = max(30, min(int(days), MAX_HISTORY_DAYS))
     try:
         return _get_eastmoney_history(code, limit)
-    except MarketDataError:
-        try:
-            return _cached(
-                f"tencent-history:{code}:{limit}",
-                ttl=180,
-                loader=lambda: _get_tencent_history(code, limit),
-            )
-        except MarketDataError as tencent_error:
+    except MarketDataError as eastmoney_error:
+        if limit > 1023:
+            raise MarketDataError(
+                f"东方财富历史行情不可用：{eastmoney_error}；"
+                "腾讯/新浪回退源最多支持 1023 个交易日"
+            ) from eastmoney_error
+
+        tencent_error: MarketDataError | None = None
+        if limit <= 501:
             try:
                 return _cached(
-                    f"sina-history:{code}:{limit}",
+                    f"tencent-history:{code}:{limit}",
                     ttl=180,
-                    loader=lambda: _get_sina_history(code, limit),
+                    loader=lambda: _get_tencent_history(code, limit),
                 )
-            except MarketDataError as sina_error:
-                raise MarketDataError(
-                    f"腾讯历史行情不可用：{tencent_error}；新浪历史行情不可用：{sina_error}"
-                ) from sina_error
+            except MarketDataError as exc:
+                tencent_error = exc
+        try:
+            return _cached(
+                f"sina-history:{code}:{limit}",
+                ttl=180,
+                loader=lambda: _get_sina_history(code, limit),
+            )
+        except MarketDataError as sina_error:
+            tencent_detail = tencent_error or "已跳过（目标窗口超过腾讯单次上限）"
+            raise MarketDataError(
+                f"东方财富历史行情不可用：{eastmoney_error}；"
+                f"腾讯历史行情不可用：{tencent_detail}；新浪历史行情不可用：{sina_error}"
+            ) from sina_error
 
 
 def get_market_snapshot(symbol: str, days: int = 252) -> dict:

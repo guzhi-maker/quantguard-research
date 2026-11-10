@@ -17,7 +17,7 @@ const latestAudit = audits.items?.[0];
 if (!latestRun) {
   throw new Error("No snapshot returned by /api/runs");
 }
-if (latestRun.summary?.symbols < 2500 || latestRun.summary?.daily_rows < 600000) {
+if (latestRun.summary?.symbols < 2800 || latestRun.summary?.daily_rows < 2800000) {
   throw new Error("Latest expanded snapshot is missing expected coverage");
 }
 if ("symbols" in (latestRun.request || {})) {
@@ -59,6 +59,8 @@ console.log(
       latest_run: latestRun.run_id,
       symbols: latestRun.summary.symbols,
       daily_rows: latestRun.summary.daily_rows,
+      date_min: latestRun.summary.date_min,
+      date_max: latestRun.summary.date_max,
       failures: latestRun.summary.failures,
       latest_audit: latestAudit.audit_id,
       reports: assessments.length,
@@ -72,3 +74,9 @@ console.log(
     2,
   ),
 );
+if (!String(latestRun.summary?.date_min || "").startsWith("2022")) {
+  throw new Error("Latest snapshot does not include long-history coverage from 2022");
+}
+if (latestRun.summary?.failures !== 0) {
+  throw new Error("Latest snapshot has collection failures");
+}

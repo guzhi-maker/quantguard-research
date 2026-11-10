@@ -243,7 +243,7 @@ async function submitCollection(event) {
   event.preventDefault();
   const symbolText = $("#poolSymbols").value.trim();
   const universeSize = Number($("#universeSize").value || 3000);
-  const historyDays = Number($("#poolHistoryDays").value || 250);
+  const historyDays = Number($("#poolHistoryDays").value || 1000);
   try {
     const job = await api("/api/jobs", {
       method: "POST",

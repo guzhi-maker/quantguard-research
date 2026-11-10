@@ -1,8 +1,8 @@
 """Verify a saved market-data snapshot against its manifest.
 
 Usage:
-    python tools/verify_snapshot.py RAW-20261110-222021-F45533
-    python tools/verify_snapshot.py data/manifests/RAW-20261110-222021-F45533.json
+    python tools/verify_snapshot.py RAW-20261110-225213-E359DC
+    python tools/verify_snapshot.py data/manifests/RAW-20261110-225213-E359DC.json
 """
 
 from __future__ import annotations

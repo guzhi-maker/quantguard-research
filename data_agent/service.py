@@ -13,6 +13,7 @@ from data_agent.store import CHINA_TZ, RawRunStore, now_iso
 from webapp import market_client
 
 MAX_UNIVERSE_SIZE = market_client.MAX_UNIVERSE_SIZE
+MAX_HISTORY_DAYS = market_client.MAX_HISTORY_DAYS
 
 
 def _elapsed_ms(started: float) -> int:
@@ -57,7 +58,7 @@ def _symbols(value: Any) -> list[str]:
 @dataclass
 class CollectionRequest:
     universe_size: int = 80
-    history_days: int = 500
+    history_days: int = 1000
     include_quotes: bool = True
     symbols: list[str] = field(default_factory=list)
     query: str = ""
@@ -67,15 +68,15 @@ class CollectionRequest:
         data = payload or {}
         try:
             universe_size = int(data.get("universe_size", 80))
-            history_days = int(data.get("history_days", 500))
+            history_days = int(data.get("history_days", 1000))
         except (TypeError, ValueError) as exc:
             raise ValueError("股票池数量和历史天数必须是整数") from exc
         if not 10 <= universe_size <= MAX_UNIVERSE_SIZE:
             raise ValueError(
                 f"股票池数量必须在 10 到 {MAX_UNIVERSE_SIZE} 之间"
             )
-        if not 30 <= history_days <= 500:
-            raise ValueError("历史天数必须在 30 到 500 之间")
+        if not 30 <= history_days <= MAX_HISTORY_DAYS:
+            raise ValueError(f"历史天数必须在 30 到 {MAX_HISTORY_DAYS} 之间")
         query = str(data.get("query") or "").strip()
         if len(query) > 500:
             raise ValueError("任务描述不能超过 500 个字符")

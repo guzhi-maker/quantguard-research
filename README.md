@@ -18,7 +18,7 @@
 
 ## 当前能力
 
-- **三千股数据池**：股票池可配置到 5,000 只；默认采集 3,000 只 × 250 个交易日，当前真实快照成功采到 2,983 只，扩容时生成独立且可复核的新快照。
+- **三千股、跨市场周期数据池**：股票池可配置到 5,000 只，历史窗口可配置到 5,000 个交易日；默认采集 3,000 只 × 1,000 个交易日，扩容时生成独立且可复核的新快照。
 - **真实网络数据**：东方财富优先，腾讯与新浪按接口回退；每行保留 `source`、`adjustment` 和 `fetched_at`。
 - **断点续采**：命令行采集器逐只写入 JSONL 与 `state.json`，网络中断后可继续，不会丢掉整批数据。
 - **数据质量核验**：统计股票数、证券-日行数、日期范围、失败数、重复主键、非法价格和缺失字段。
@@ -63,13 +63,13 @@ DEEPSEEK_MODEL=deepseek-chat
 ### 命令行采集与断点续采
 
 ```powershell
-.\.venv\Scripts\python.exe data_agent\collect_dataset.py --universe-size 3000 --history-days 250
+.\.venv\Scripts\python.exe data_agent\collect_dataset.py --universe-size 3000 --history-days 1000
 ```
 
 如果网络中断：
 
 ```powershell
-.\.venv\Scripts\python.exe data_agent\collect_dataset.py --staging data\raw\_staging\<staging目录> --history-days 250
+.\.venv\Scripts\python.exe data_agent\collect_dataset.py --staging data\raw\_staging\<staging目录> --history-days 1000
 ```
 
 采集完成后自动生成不可覆盖的正式快照：
@@ -83,10 +83,10 @@ data/manifests/<run_id>.json
 
 `data/raw/`、`data/audits/` 和 `.env` 不应提交到 Git。仓库只保存采集程序、契约、测试和研究说明；数据文件通过本地快照或课程网盘交接。
 
-当前正式快照 `RAW-20261110-222021-F45533` 已通过独立复核：2,983 只股票、737,284 条证券-日记录、2,983 条实时行情、0 条失败记录、0 个重复主键、0 行非法价格。全部日线均来自东方财富前复权接口，`unverified` 行为 0。运行以下命令可重新核对文件哈希、行数和日期范围：
+当前正式快照 `RAW-20261110-225213-E359DC` 已通过独立复核：2,983 只股票、2,868,954 条证券-日记录、2,983 条实时行情，覆盖 2022-07-19 至 2026-11-10；0 条失败记录、0 个重复主键、0 行非法价格。全部日线均来自东方财富前复权接口，`unverified` 行为 0。运行以下命令可重新核对文件哈希、行数和日期范围：
 
 ```powershell
-.\.venv\Scripts\python.exe tools\verify_snapshot.py RAW-20261110-222021-F45533
+.\.venv\Scripts\python.exe tools\verify_snapshot.py RAW-20261110-225213-E359DC
 ```
 
 ## 个股研究报告

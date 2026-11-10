@@ -12,6 +12,7 @@ from typing import Any, Callable
 from config.settings import PROJECT_ROOT
 from data_agent.catalog import get_source_catalog
 from data_agent.service import (
+    MAX_HISTORY_DAYS,
     MAX_UNIVERSE_SIZE,
     CollectionRequest,
     CollectorService,
@@ -188,7 +189,7 @@ TOOLS = [
                     "history_days": {
                         "type": "integer",
                         "minimum": 30,
-                        "maximum": 500,
+                        "maximum": MAX_HISTORY_DAYS,
                         "description": "每只股票请求的日线长度。",
                     },
                     "include_quotes": {

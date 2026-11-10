@@ -1,4 +1,4 @@
-# QuantGuard A 股三千股研究数据集卡片 v1.1
+# QuantGuard A 股三千股长周期研究数据集卡片 v1.2
 
 ## 1. 数据集定位
 
@@ -9,12 +9,12 @@
 | 项目 | 内容 |
 | --- | --- |
 | 数据集名称 | QuantGuard 三千股原始行情研究快照 |
-| 快照编号 | `RAW-20261110-222021-F45533` |
-| 快照生成时间 | `2026-11-10T22:20:27+08:00` |
-| 原始数据范围 | `2025-09-11` 至 `2026-11-10` |
+| 快照编号 | `RAW-20261110-225213-E359DC` |
+| 快照生成时间 | `2026-11-10T22:52:36+08:00` |
+| 原始数据范围 | `2022-07-19` 至 `2026-11-10` |
 | 请求股票数 | 2,983 |
 | 成功股票数 | 2,983 |
-| 证券-日记录 | 737,284 |
+| 证券-日记录 | 2,868,954 |
 | 实时行情记录 | 2,983 |
 | 采集失败记录 | 0 |
 | 主键重复 | 0 |
@@ -22,21 +22,21 @@
 | 当前维护者 | 成员 A：数据采集、AI 数据核验、交互网页与数据文档 |
 | 下游使用者 | 成员 B：数据整理、展示与汇报；成员 C：标签、机器学习、组合风控与研究报告 |
 
-原始 CSV 位于 `data/raw/RAW-20261110-222021-F45533/`，默认不提交到 Git。可复核 manifest 位于 `data/manifests/RAW-20261110-222021-F45533.json`。
+原始 CSV 位于 `data/raw/RAW-20261110-225213-E359DC/`，默认不提交到 Git。可复核 manifest 位于 `data/manifests/RAW-20261110-225213-E359DC.json`。
 
-采集器当前最多可配置 5,000 只股票，默认请求 3,000 只；公开股票池过滤后本次实际得到 2,983 只。本卡片只描述这份快照；继续扩容时应生成新的 `RAW-*` 快照和对应 manifest，不能覆盖本快照。
+采集器当前最多可配置 5,000 只股票、5,000 个交易日；默认请求 3,000 只 × 1,000 日。公开股票池过滤后本次实际得到 2,983 只，整体日期范围覆盖约四年。本卡片只描述这份快照；继续扩容时应生成新的 `RAW-*` 快照和对应 manifest，不能覆盖本快照。
 
 ## 2. 产物清单
 
 ```text
-data/raw/RAW-20261110-222021-F45533/
+data/raw/RAW-20261110-225213-E359DC/
 ├── market_daily.csv       # 个股日线，主键为 (date, symbol)
 ├── market_quotes.csv      # 抓取时点的最新行情快照，主键按 symbol 预期唯一
 ├── universe.csv           # 抓取时点按流动性筛选出的股票池
 └── complete.json          # staging 完成标记，记录 run_id
 
 data/manifests/
-└── RAW-20261110-222021-F45533.json
+└── RAW-20261110-225213-E359DC.json
                            # 请求参数、来源、字段、哈希、质量、失败项和限制
 
 data/audits/
@@ -52,8 +52,8 @@ data/audits/
 
 | 来源 | 日线记录数 | 复权口径 | 说明 |
 | --- | ---: | --- | --- |
-| 东方财富前复权日行情 | 737,284 | `qfq` | 本快照全部日线均来自首选源 |
-| 合计 | 737,284 | - | `qfq` 737,284 行，`unverified` 0 行 |
+| 东方财富前复权日行情 | 2,868,954 | `qfq` | 本快照全部日线均来自首选源 |
+| 合计 | 2,868,954 | - | `qfq` 2,868,954 行，`unverified` 0 行 |
 
 每一行均保留：
 
@@ -133,9 +133,9 @@ manifest 是数据集的机器可读说明，主要包括：
 [x] manifest status = complete
 [x] 成功股票数 2,983 >= 2,500
 [x] 请求股票数 2,983，成功股票数 2,983
-[x] 日线记录 737,284
+[x] 日线记录 2,868,954
 [x] 实时行情记录 2,983
-[x] 日线日期范围 2025-09-11 至 2026-11-10
+[x] 日线日期范围 2022-07-19 至 2026-11-10
 [x] 重复主键 0
 [x] 非法价格 0
 [x] 缺失收盘价 0
@@ -149,14 +149,14 @@ manifest 是数据集的机器可读说明，主要包括：
 
 | 文件 | SHA256 |
 | --- | --- |
-| `market_daily.csv` | `4c18ca572074e01226270ebf7df7f1b4e93279f766efdd7b81bd65ab3c19aadc` |
-| `market_quotes.csv` | `4112b3a09f7e9d8a1da9c9219bfb07bc1000591f4eb20f19566ca4f966ad123e` |
-| `universe.csv` | `68d8ce6fbde9a893fc8de96bb7de5d0898d4e0a54f18364288875411aa4574bd` |
+| `market_daily.csv` | `12d3eee9372ee3d6f78a65a7d8171c8a6d725d9e66930c6e15ffd388f718adf5` |
+| `market_quotes.csv` | `3519a4b8b25a418a356c37eb544c021f584972b7576c2095e9c2858da85406b9` |
+| `universe.csv` | `aa4ccd8be17dbb5f5813ebbe557c8b4fc39c1dc3b70cabcd79f7c8b49e0d1e76` |
 
 一键复核：
 
 ```powershell
-.\.venv\Scripts\python.exe tools\verify_snapshot.py RAW-20261110-222021-F45533
+.\.venv\Scripts\python.exe tools\verify_snapshot.py RAW-20261110-225213-E359DC
 ```
 
 本次快照的 `failures`、`symbols_missing_quotes` 和各类缺失字段计数均为 0。后续抓取若出现网络中断或接口覆盖差异，失败项会保留在 manifest 中；失败不能通过伪造数据补齐，需要时重新采集并生成新快照。
@@ -189,7 +189,7 @@ manifest 是数据集的机器可读说明，主要包括：
 ```powershell
 .\.venv\Scripts\python.exe data_agent\collect_dataset.py `
   --staging data\raw\_staging\<staging目录> `
-  --history-days 250
+  --history-days 1000
 ```
 
 新建快照：
@@ -197,7 +197,7 @@ manifest 是数据集的机器可读说明，主要包括：
 ```powershell
 .\.venv\Scripts\python.exe data_agent\collect_dataset.py `
   --universe-size 3000 `
-  --history-days 250
+  --history-days 1000
 ```
 
 ## 7. 可交互 AI 网页
@@ -286,4 +286,4 @@ labels: forward_return_5d, forward_return_20d,
 
 - [研究数据台使用说明](data-agent-workbench.md)
 - [项目总览](../README.md)
-- [最新 manifest](../data/manifests/RAW-20261110-222021-F45533.json)
+- [最新 manifest](../data/manifests/RAW-20261110-225213-E359DC.json)

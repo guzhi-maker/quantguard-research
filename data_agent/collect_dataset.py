@@ -1,7 +1,7 @@
 """Collect a reproducible research snapshot from the command line.
 
 Example:
-    python data_agent/collect_dataset.py --universe-size 3000 --history-days 250
+    python data_agent/collect_dataset.py --universe-size 3000 --history-days 1000
 
 Rows are appended to a staging folder as each symbol finishes. If the network
 drops, rerun with --staging <folder> to resume. A final immutable snapshot
@@ -36,8 +36,10 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--history-days", type=int, default=250,
-        help="每只股票的历史交易日数（30-500），默认 250",
+        "--history-days", type=int, default=1000,
+        help=(
+            f"每只股票的历史交易日数（30-{market_client.MAX_HISTORY_DAYS}），默认 1000"
+        ),
     )
     parser.add_argument(
         "--symbols", type=str, default="",

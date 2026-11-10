@@ -91,6 +91,7 @@ async function collect(client, width, height) {
       researchSteps: document.querySelectorAll('.research-step').length,
       poolSymbols: document.querySelector('#poolSymbolsCount')?.textContent,
       poolRows: document.querySelector('#poolRowsCount')?.textContent,
+      poolDateRange: document.querySelector('#poolDateRange')?.textContent,
       reportTitle: document.querySelector('#reportTitle')?.textContent,
     })`,
   );
@@ -140,7 +141,9 @@ try {
         newsRows: document.querySelectorAll('.news-row').length,
         datasetOptions: document.querySelectorAll('#datasetSelect option').length,
         defaultPoolSize: document.querySelector('#universeSize')?.value,
+        defaultHistoryDays: document.querySelector('#poolHistoryDays')?.value,
         poolOptions: Array.from(document.querySelectorAll('#universeSize option')).map((item) => item.value),
+        historyOptions: Array.from(document.querySelectorAll('#poolHistoryDays option')).map((item) => item.value),
       };
     })()`,
   );
@@ -151,8 +154,11 @@ try {
   const mobileLayout = JSON.parse(mobile.layout);
   const failed =
     desktop.indicatorRows !== 14 ||
-    Number(desktop.poolSymbols.replaceAll(',', '')) < 2500 ||
-    Number(desktop.poolRows.replaceAll(',', '')) < 600000 ||
+    interaction.defaultHistoryDays !== '1000' ||
+    !interaction.historyOptions.includes('5000') ||
+    Number(desktop.poolSymbols.replaceAll(',', '')) < 2800 ||
+    Number(desktop.poolRows.replaceAll(',', '')) < 2800000 ||
+    !String(desktop.poolDateRange || '').includes('2022') ||
     interaction.defaultPoolSize !== '3000' ||
     !interaction.poolOptions.includes('3000') ||
     !interaction.poolOptions.includes('5000') ||
