@@ -16,6 +16,8 @@
 
 正式的数据交接材料见 [数据集卡片](docs/dataset-card.md)，其中记录快照范围、来源血缘、字段字典、质量门控、已知偏差、复现步骤以及给成员 B/C 的治理和建模说明。
 
+第一次接手仓库请先阅读 [交接说明](HANDOFF.md)，其中列出当前数据版本、Git 与外部数据包的边界、启动步骤和验收命令。
+
 ## 当前能力
 
 - **三千股、跨市场周期数据池**：股票池可配置到 5,000 只，历史窗口可配置到 5,000 个交易日；默认采集 3,000 只 × 1,000 个交易日，扩容时生成独立且可复核的新快照。
@@ -35,14 +37,18 @@
 Windows PowerShell：
 
 ```powershell
-cd C:\Users\25187\Desktop\量化
+git clone https://github.com/guzhi-maker/quantguard-research.git
+cd quantguard-research
 
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
 .\.venv\Scripts\python.exe run_server.py --port 8789
 ```
 
 浏览器打开 `http://127.0.0.1:8789/`。
+
+Git 不包含原始 CSV、财务快照、因子库和研究交接 ZIP。只启动界面时不需要下载大文件；需要复现当前报表时，按 [交接说明](HANDOFF.md) 将外部数据包放回对应目录。
 
 在本地 `.env` 中配置 DeepSeek：
 
@@ -251,7 +257,6 @@ tests/
 ## 测试
 
 ```powershell
-$env:PYTHONPATH=(Resolve-Path '.pytest-deps').Path
 $env:LOKY_MAX_CPU_COUNT='1'
 .\.venv\Scripts\python.exe -m pytest -q
 node --check data_agent\static\app.js
@@ -260,6 +265,8 @@ node tools\check_layout.mjs
 ```
 
 测试覆盖参数校验、原始 CSV、manifest、SHA256、来源血缘、分页、DeepSeek 工具循环、双源核价、14 项指标解释、六步研究链、新闻失败记录和 HTTP API。
+
+`check_api.mjs` 和 `check_layout.mjs` 需要先启动本地服务；布局检查使用 Edge 的 DOM 模式，不需要截图。
 
 派生层另包含覆盖度分布、Parquet 行数、DuckDB 可读性和交接 ZIP 内容测试。
 

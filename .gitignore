@@ -7,6 +7,8 @@ venv/
 
 # 密钥与本地配置
 .env
+.env.*
+!.env.example
 *.key
 *.pem
 
@@ -39,6 +41,7 @@ exports/
 Thumbs.db
 
 # 测试临时文件
+*.log
 .pytest_cache/
 .coverage
 htmlcov/

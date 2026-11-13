@@ -71,10 +71,13 @@ factors/
 
 exports/
 ├── RAW-20261110-225213-E359DC.zip          # 原始 CSV + manifest 交接包
+├── FUND-20261113-222652-101412.zip         # 财务、股本、分红、不复权价与指数
 └── RAW-20261110-225213-E359DC_research.zip # 派生层 + manifest + 文档
 ```
 
 `data/raw/` 与 `data/audits/` 是本地研究产物，不应提交到公开仓库。课程网盘交接时，应同时保留这三个 CSV、manifest 和本说明。
+
+`data/fundamentals/` 保存因子重算所需的原始财务、股本、分红和不复权价格快照。三个外部数据包的名称、大小和 SHA256 统一列在 [交接说明](../HANDOFF.md)。
 
 `data/derived/` 与 `exports/` 同样不进入 Git；它们可从原始快照重建，不能替代原始 CSV、manifest 和 SHA256。
 
