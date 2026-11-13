@@ -59,6 +59,14 @@ DeepSeek 密钥可选。未配置密钥时，公开数据采集、核价、指�
 
 ### 2. 恢复原始数据
 
+| 数据包 | 解压位置 | 最终目录 |
+| --- | --- | --- |
+| `RAW-20261110-225213-E359DC.zip` | `data\raw\` | `data\raw\RAW-20261110-225213-E359DC\` |
+| `FUND-20261113-222652-101412.zip` | `data\fundamentals\` | `data\fundamentals\FUND-20261113-222652-101412\` |
+| `RAW-20261110-225213-E359DC_research.zip` | 解压后取其 `RESEARCH-RAW-...` 内容 | `data\derived\RAW-20261110-225213-E359DC\` |
+
+数据目录属于本地运行数据，已被 Git 忽略。不要把数据解压到 `data_agent/`、`webapp/` 或其他源码目录。
+
 将两个原始数据 ZIP 放入 `exports/`，然后在仓库根目录执行：
 
 ```powershell
@@ -93,7 +101,19 @@ data/derived/RAW-20261110-225213-E359DC/quantguard.duckdb
 
 如果只需要下游建模，也可以直接解压研究 ZIP，在其 `RESEARCH-*` 目录内使用 DuckDB 和 Parquet，不必恢复网页目录结构。
 
-### 4. 启动研究页面
+不要直接把解压得到的 `RESEARCH-RAW-...` 文件夹整个放进 `data/derived/`。网页要求研究包中的 `factors/`、`parquet/`、`coverage*.json` 和 `quantguard.duckdb` 出现在 `data/derived/RAW-20261110-225213-E359DC/` 直属目录下。
+
+### 4. 可选：恢复历史 AI 研究报告
+
+当前保存的课堂示例报告不在三个数据 ZIP 中。如果负责人另外提供了 `AUDIT-20261110-000919-14F9EE` 文件夹，将它放到：
+
+```text
+data/audits/AUDIT-20261110-000919-14F9EE/
+```
+
+恢复该目录后，网页会直接展示贵州茅台、宁德时代和中国平安的 14 项指标、六步研究链和新闻证据。没有该目录不影响行情采集、因子研究和现场重新生成报告。
+
+### 5. 启动研究页面
 
 ```powershell
 .\.venv\Scripts\python.exe run_server.py --port 8789
