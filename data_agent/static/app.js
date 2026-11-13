@@ -344,8 +344,8 @@ function renderCoverage() {
       "覆盖度 JSON", coverage.files.coverage?.path,
     ]].forEach(([label, path]) => appendDerivedLink(links, runId, label, path));
   }
-  if (derive?.parquet) {
-    (derive.parquet.market_daily?.files || []).forEach((item) => {
+  if (derive?.parquet?.available !== false) {
+    (derive?.parquet?.market_daily?.files || []).forEach((item) => {
       appendDerivedLink(
         links,
         runId,
@@ -353,11 +353,15 @@ function renderCoverage() {
         `parquet/market_daily/${item.path}`,
       );
     });
-    appendDerivedLink(links, runId, "行情 Parquet", "parquet/market_quotes.parquet");
-    appendDerivedLink(links, runId, "股票池 Parquet", "parquet/universe.parquet");
-    if (derive.duckdb?.status === "ready") {
-      appendDerivedLink(links, runId, "DuckDB 数据库", derive.duckdb.path);
+    if (derive?.parquet?.market_quotes) {
+      appendDerivedLink(links, runId, "行情 Parquet", "parquet/market_quotes.parquet");
     }
+    if (derive?.parquet?.universe) {
+      appendDerivedLink(links, runId, "股票池 Parquet", "parquet/universe.parquet");
+    }
+  }
+  if (derive?.duckdb?.status === "ready") {
+    appendDerivedLink(links, runId, "DuckDB 数据库", derive.duckdb.path);
   }
 }
 

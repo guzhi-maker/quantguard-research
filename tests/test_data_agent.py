@@ -379,6 +379,28 @@ def test_research_bundle_packages_docs_and_derived_files(tmp_path):
     assert f"{prefix}/docs/dataset-card.md" in names
     assert any(name.endswith(".parquet") for name in names)
 
+    compact = build_research_bundle(
+        run_id,
+        store=service.store,
+        derived_dir=tmp_path / "derived",
+        exports_dir=tmp_path / "exports",
+        compact=True,
+    )
+    assert compact["compact"] is True
+    compact_path = Path(compact["path"])
+    assert compact_path.name.endswith("_research_compact.zip")
+    with zipfile.ZipFile(compact_path) as archive:
+        compact_names = set(archive.namelist())
+        compact_readme = archive.read(f"{prefix}/README.md").decode("utf-8")
+        compact_manifest = json.loads(
+            archive.read(f"{prefix}/export_manifest.json").decode("utf-8")
+        )
+    assert not any("/parquet/" in name for name in compact_names)
+    assert not any("/factors/factor_panel/" in name for name in compact_names)
+    assert "打包模式：精简版" in compact_readme
+    assert compact_manifest["bundle"]["mode"] == "compact"
+    assert compact_manifest["parquet"]["available"] is False
+
 
 def test_collector_server_api_and_static_page(tmp_path):
     service = make_service(tmp_path)

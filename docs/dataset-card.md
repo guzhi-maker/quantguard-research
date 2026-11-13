@@ -1,4 +1,4 @@
-# QuantGuard A 股三千股长周期研究数据集卡片 v1.4
+# QuantGuard A 股三千股长周期研究数据集卡片 v1.5
 
 ## 1. 数据集定位
 
@@ -72,12 +72,16 @@ factors/
 exports/
 ├── RAW-20261110-225213-E359DC.zip          # 原始 CSV + manifest 交接包
 ├── FUND-20261113-222652-101412.zip         # 财务、股本、分红、不复权价与指数
-└── RAW-20261110-225213-E359DC_research.zip # 派生层 + manifest + 文档
+├── RAW-20261110-225213-E359DC_research_compact.zip # 推荐研究交接包
+└── RAW-20261110-225213-E359DC_research.zip         # 完整本地备份（不交接）
 ```
 
 `data/raw/` 与 `data/audits/` 是本地研究产物，不应提交到公开仓库。课程网盘交接时，应同时保留这三个 CSV、manifest 和本说明。
 
-`data/fundamentals/` 保存因子重算所需的原始财务、股本、分红和不复权价格快照。三个外部数据包的名称、大小和 SHA256 统一列在 [交接说明](../HANDOFF.md)。
+`data/fundamentals/` 保存因子重算所需的原始财务、股本、分红和不复权价格快照。
+`RAW-..._research_compact.zip` 是推荐交接包，省略与 DuckDB 重复的 `parquet/`
+和 `factors/factor_panel/`，当前约 590 MiB。和原始行情包、基本面包合计约 701 MiB，
+低于 1 GB。所有交接包名称、大小和 SHA256 统一列在 [交接说明](../HANDOFF.md)。
 
 `data/derived/` 与 `exports/` 同样不进入 Git；它们可从原始快照重建，不能替代原始 CSV、manifest 和 SHA256。
 
@@ -355,7 +359,9 @@ labels: forward_return_5d, forward_return_20d,
 - 同时报告 IC、RankIC、ICIR、分层收益、换手率、最大回撤和交易成本敏感性。
 - 预测分数用于横截面排序或风险过滤，不把回测收益表述为未来保证。
 
-成员 C 可优先读取 `parquet/market_daily/` 或 `quantguard.duckdb`，避免反复解析 484 MB CSV。Parquet 与 DuckDB 行数必须与原始 manifest 一致，派生层重建后应重新核对 `export_manifest.json` 的 SHA256。
+成员 C 应优先读取精简包中的 `factors/factors.duckdb`（`factor_panel` 表）与
+`quantguard.duckdb`，避免反复解析 CSV。精简包不再重复携带大体积 Parquet；
+DuckDB 行数必须与原始 manifest 一致，重建派生层后应重新核对 manifest 的 SHA256。
 
 ```python
 import duckdb
@@ -382,7 +388,7 @@ print(con.execute('SELECT * FROM coverage_by_symbol ORDER BY missing_sessions DE
 [x] 基本面快照 complete，2,983 只股票关键阶段失败为 0
 [x] 24 因子面板与 DuckDB 已生成，公告日对齐与来源血缘可复核
 [x] Parquet 行数与原始快照一致，DuckDB 可读
-[x] 研究交接 ZIP 与研究导出 SHA256 已生成
+[x] 精简研究交接 ZIP 与研究导出 SHA256 已生成，三个优先包合计低于 1 GB
 [ ] 成员 B 建立治理版本并记录转换规则
 [ ] 成员 C 完成标签、时间切分、模型、组合回测和研究报告
 ```

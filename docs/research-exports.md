@@ -73,24 +73,30 @@ data/derived/RAW-20261110-225213-E359DC/
 
 ## 交接 ZIP
 
-课程交接时将派生层、原始 manifest 和文档打成一个 ZIP。原始 CSV 已在原始快照交接包中，不重复打包。
+课程交接时将派生层、原始 manifest 和文档打成一个 ZIP。原始 CSV 已在原始快照交接包中，不重复打包。推荐使用精简版，省略与 DuckDB 重复的大体量 Parquet 分区。
 
 ```powershell
-.\.venv\Scripts\python.exe tools\package_research_exports.py RAW-20261110-225213-E359DC
+.\.venv\Scripts\python.exe tools\package_research_exports.py RAW-20261110-225213-E359DC --compact
 ```
 
-输出 `exports/<run_id>_research.zip` 与同名 `.zip.sha256`，包含：
+输出 `exports/<run_id>_research_compact.zip` 与同名 `.zip.sha256`。精简包包含：
 
 ```text
 README.md                交接说明、统计与使用方式
 coverage*.json/csv      覆盖度证据
-parquet/                按年分区日线与行情、股票池
 quantguard.duckdb       DuckDB 数据库
 query_examples.sql      示例 SQL
 export_manifest.json    派生文件清单与 SHA256
 raw_manifest.json       原始快照 manifest
 docs/                   数据集卡片与本说明
 ```
+
+精简包同时保留 `factors/` 下的 `factors.duckdb`、因子字典、覆盖度和财务辅助
+Parquet。包内 `export_manifest.json` 和 `factors/factor_manifest.json` 会同步裁剪
+已省略文件的索引，网页不会生成失效的 Parquet 下载链接。
+
+若研究确实需要直接扫描按年 Parquet，可去掉 `--compact` 生成完整版
+`exports/<run_id>_research.zip`。完整版体积更大，仅作为本地研究备份。
 
 ## Parquet
 

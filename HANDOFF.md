@@ -31,7 +31,7 @@ Git 仓库只保存以下内容：
 | --- | ---: | --- | --- |
 | `RAW-20261110-225213-E359DC.zip` | 91,710,762 B | `91ce1ec7d60777e714df6761eb5b8ff51a5b2a968468d7d8abe2182901dcee91` | 原始行情 CSV 和快照 manifest |
 | `FUND-20261113-222652-101412.zip` | 25,130,371 B | `ba9ef36d340c49726be027e5541e227fdf461f96e4a192a19cfbdd8fdccbbc91` | 原始财务、股本、分红、不复权和沪深 300 |
-| `RAW-20261110-225213-E359DC_research.zip` | 1,363,424,190 B | `3da2d3ee61f9d7cb14b6187969521fba23fdc821072512588aad480c85b86281` | 24 因子 Parquet、DuckDB、覆盖度与交接文档 |
+| `RAW-20261110-225213-E359DC_research_compact.zip` | 618,530,441 B | `9a2be4f8c2a169c7ea7aad86f280c0add8ecc489b57842c6291570483dc07558` | 24 因子 DuckDB、财务辅助 Parquet、覆盖度与交接文档 |
 
 当前因子数据库单独校验值为：
 
@@ -41,6 +41,11 @@ factors.duckdb
 ```
 
 这三个 ZIP 默认位于本地 `exports/`，不会提交到 Git。
+
+三个优先交接包合计 735,371,574 B（701.30 MiB），低于 1 GB。精简研究包省略了
+与 DuckDB 重复的 `parquet/` 和 `factors/factor_panel/` 分区副本，但仍保留全部
+行情、因子和辅助数据。旧完整包 `RAW-20261110-225213-E359DC_research.zip`
+（1,363,424,190 B）只作为本地回退备份，不需要发给组员。
 
 ## 恢复工作区
 
@@ -63,7 +68,7 @@ DeepSeek 密钥可选。未配置密钥时，公开数据采集、核价、指�
 | --- | --- | --- |
 | `RAW-20261110-225213-E359DC.zip` | `data\raw\` | `data\raw\RAW-20261110-225213-E359DC\` |
 | `FUND-20261113-222652-101412.zip` | `data\fundamentals\` | `data\fundamentals\FUND-20261113-222652-101412\` |
-| `RAW-20261110-225213-E359DC_research.zip` | 解压后取其 `RESEARCH-RAW-...` 内容 | `data\derived\RAW-20261110-225213-E359DC\` |
+| `RAW-20261110-225213-E359DC_research_compact.zip` | 解压后取其 `RESEARCH-RAW-...` 内容 | `data\derived\RAW-20261110-225213-E359DC\` |
 
 数据目录属于本地运行数据，已被 Git 忽略。不要把数据解压到 `data_agent/`、`webapp/` 或其他源码目录。
 
@@ -85,7 +90,7 @@ data/fundamentals/FUND-20261113-222652-101412/
 
 ```powershell
 $bundle = Join-Path $env:TEMP 'quantguard-research-handoff'
-Expand-Archive exports\RAW-20261110-225213-E359DC_research.zip $bundle
+Expand-Archive exports\RAW-20261110-225213-E359DC_research_compact.zip $bundle
 $source = Join-Path $bundle 'RESEARCH-RAW-20261110-225213-E359DC'
 $target = 'data\derived\RAW-20261110-225213-E359DC'
 New-Item -ItemType Directory -Path $target -Force | Out-Null
@@ -99,9 +104,12 @@ data/derived/RAW-20261110-225213-E359DC/factors/factors.duckdb
 data/derived/RAW-20261110-225213-E359DC/quantguard.duckdb
 ```
 
-如果只需要下游建模，也可以直接解压研究 ZIP，在其 `RESEARCH-*` 目录内使用 DuckDB 和 Parquet，不必恢复网页目录结构。
+如果只需要下游建模，也可以直接解压研究 ZIP，在其 `RESEARCH-*` 目录内使用两个 DuckDB，不必恢复网页目录结构。
 
-不要直接把解压得到的 `RESEARCH-RAW-...` 文件夹整个放进 `data/derived/`。网页要求研究包中的 `factors/`、`parquet/`、`coverage*.json` 和 `quantguard.duckdb` 出现在 `data/derived/RAW-20261110-225213-E359DC/` 直属目录下。
+不要直接把解压得到的 `RESEARCH-RAW-...` 文件夹整个放进 `data/derived/`。网页要求
+`factors/`、`coverage*.json` 和 `quantguard.duckdb` 出现在
+`data/derived/RAW-20261110-225213-E359DC/` 直属目录下。精简包不包含重复的
+`parquet/` 与 `factors/factor_panel/`，网页和建模均从 DuckDB 读取对应表。
 
 ### 4. 可选：恢复历史 AI 研究报告
 
@@ -143,6 +151,10 @@ node tools\check_layout.mjs
 24 因子齐全率 96.52%
 桌面和 390px 手机布局均无横向溢出或元素重叠
 ```
+
+精简研究包另需通过解压抽查：`factors/factors.duckdb` 的 `factor_panel` 为
+2,868,954 行、2,983 只股票，24 因子可用行 2,769,089；`quantguard.duckdb`
+的 `market_daily` 同样为 2,868,954 行、2,983 只股票。
 
 ## 交接后的下一步
 

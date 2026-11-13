@@ -6,6 +6,7 @@ not duplicated here.
 
 Usage:
     python tools/package_research_exports.py RAW-20261110-225213-E359DC
+    python tools/package_research_exports.py RAW-20261110-225213-E359DC --compact
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ def _readme(
     manifest: dict,
     coverage: dict,
     factor_manifest: dict | None = None,
+    compact: bool = False,
 ) -> str:
     summary = coverage.get("summary") or {}
     parquet = (manifest.get("parquet") or {}).get("daily_rows")
@@ -70,8 +72,44 @@ def _readme(
             f"金融模板规则为“{quality.get('financial_template_rule', '未记录')}”；"
             f"不复权价来源 {source_text or '未记录'}\n"
         )
+    inventory = """coverage.json                 覆盖度审计摘要与限制
+coverage_by_symbol.csv        全部股票的历史长度、缺口和首末日期
+coverage_by_year.csv          年度交易日与记录数
+factors/factor_panel/         按年分区的 24 因子研究面板
+factors/factors.duckdb        因子、财务、股本、分红和日线联合数据库
+factors/factor_manifest.json  因子口径、覆盖与 SHA256
+factors/factor_dictionary.csv 24 因子字典与使用建议
+factors/*.parquet             财务、股本、分红、不复权价和指数
+parquet/market_daily/         按年分区的日线 Parquet（zstd）
+parquet/market_quotes.parquet 抓取时点最新行情
+parquet/universe.parquet      抓取时点流动性股票池
+quantguard.duckdb             可直接 SQL 查询的行情 DuckDB
+query_examples.sql            示例查询
+export_manifest.json          派生层文件清单与 SHA256
+raw_manifest.json             原始快照的请求、质量、血缘与 SHA256
+docs/                         数据集卡片与研究导出说明"""
+    if compact:
+        inventory = """coverage.json                 覆盖度审计摘要与限制
+coverage_by_symbol.csv        全部股票的历史长度、缺口和首末日期
+coverage_by_year.csv          年度交易日与记录数
+factors/factors.duckdb        因子、财务、股本、分红和日线联合数据库
+factors/factor_manifest.json  因子口径、覆盖与 SHA256
+factors/factor_dictionary.csv 24 因子字典与使用建议
+factors/*.parquet             财务、股本、分红、不复权价和指数
+quantguard.duckdb             可直接 SQL 查询的行情 DuckDB
+query_examples.sql            示例查询
+export_manifest.json          派生层文件清单与 SHA256
+raw_manifest.json             原始快照的请求、质量、血缘与 SHA256
+docs/                         数据集卡片与研究导出说明"""
+    parquet_note = (
+        "精简版不包含因子面板和行情 Parquet 分区副本；对应数据可分别从"
+        " `factors/factors.duckdb` 与 `quantguard.duckdb` 直接查询。"
+        if compact
+        else "Parquet 也可以直接被 pandas、Polars、PyArrow 或 DuckDB 读取。"
+    )
     return f"""# QuantGuard 研究交接包
 
+{'- 打包模式：精简版。为控制在课程传输限制内，省略与 DuckDB 重复的大体量 Parquet 分区；全部字段仍在 DuckDB 中。' if compact else '- 打包模式：完整版，同时包含 DuckDB 与按年 Parquet 副本。'}
 - 快照编号：`{run_id}`
 - 覆盖区间：`{summary.get("date_min")}` 至 `{summary.get("date_max")}`
 - 股票数：{summary.get("symbols"):,}
@@ -86,21 +124,7 @@ def _readme(
 ## 目录
 
 ```text
-coverage.json                 覆盖度审计摘要与限制
-coverage_by_symbol.csv        全部股票的历史长度、缺口和首末日期
-coverage_by_year.csv          年度交易日与记录数
-factors/factor_panel/         按年分区的 24 因子研究面板
-factors/factors.duckdb        因子、财务、股本、分红和日线联合数据库
-factors/factor_manifest.json  因子口径、覆盖与 SHA256
-factors/factor_dictionary.csv 24 因子字典与使用建议
-parquet/market_daily/         按年分区的日线 Parquet（zstd）
-parquet/market_quotes.parquet 抓取时点最新行情
-parquet/universe.parquet      抓取时点流动性股票池
-quantguard.duckdb             可直接 SQL 查询的 DuckDB 数据库
-query_examples.sql            示例查询
-export_manifest.json          派生层文件清单与 SHA256
-raw_manifest.json             原始快照的请求、质量、血缘与 SHA256
-docs/                         数据集卡片与研究导出说明
+{inventory}
 ```
 
 ## 使用
@@ -110,8 +134,7 @@ python -m pip install duckdb pyarrow pandas
 python -c "import duckdb; c=duckdb.connect('quantguard.duckdb', read_only=True); print(c.execute('select count(*) from market_daily').fetchone())"
 ```
 
-Parquet 也可以直接被 pandas、Polars、PyArrow 或 DuckDB 的
-`read_parquet(..., hive_partitioning = true)` 读取。
+{parquet_note}
 
 ## 边界
 
@@ -127,6 +150,7 @@ def build_research_bundle(
     store: RawRunStore | None = None,
     derived_dir: Path | None = None,
     exports_dir: Path | None = None,
+    compact: bool = False,
 ) -> dict:
     """Create a deterministic handoff ZIP and a SHA256 sidecar."""
     store = store or RawRunStore()
@@ -146,15 +170,59 @@ def build_research_bundle(
 
     target_dir = Path(exports_dir or ROOT / "exports")
     target_dir.mkdir(parents=True, exist_ok=True)
-    target = target_dir / f"{run_id}_research.zip"
+    suffix = "_research_compact.zip" if compact else "_research.zip"
+    target = target_dir / f"{run_id}{suffix}"
     temporary = target.with_suffix(".zip.tmp")
     if temporary.exists():
         temporary.unlink()
 
     files: list[tuple[Path, str]] = []
+    rewritten: dict[str, str] = {}
     for path in sorted(source_root.rglob("*")):
         if path.is_file():
-            files.append((path, path.relative_to(source_root).as_posix()))
+            relative = path.relative_to(source_root)
+            if compact and (
+                relative.parts[0] == "parquet"
+                or relative.as_posix().startswith("factors/factor_panel/")
+            ):
+                continue
+            relative_text = relative.as_posix()
+            if compact and relative_text == "export_manifest.json":
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                parquet = payload.get("parquet") or {}
+                parquet["available"] = False
+                parquet["omitted_reason"] = "精简包使用 quantguard.duckdb，省略重复的 Parquet 分区"
+                payload["parquet"] = parquet
+                payload["bundle"] = {
+                    "mode": "compact",
+                    "omitted": [
+                        "parquet/",
+                        "factors/factor_panel/",
+                    ],
+                }
+                rewritten[relative_text] = json.dumps(
+                    payload, ensure_ascii=False, indent=2
+                )
+            elif compact and relative_text == "factors/factor_manifest.json":
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                file_map = payload.get("files") or {}
+                omitted = sorted(
+                    key for key in file_map if key.startswith("factor_panel/")
+                )
+                payload["files"] = {
+                    key: value
+                    for key, value in file_map.items()
+                    if key not in omitted
+                }
+                payload["bundle"] = {
+                    "mode": "compact",
+                    "omitted_files": omitted,
+                    "note": "factor_panel 表仍保存在 factors.duckdb 中",
+                }
+                rewritten[relative_text] = json.dumps(
+                    payload, ensure_ascii=False, indent=2
+                )
+            files.append((path, relative.as_posix()))
     files.append((raw_manifest, "raw_manifest.json"))
     for name in ("dataset-card.md", "research-exports.md", "factor-data-standard.md"):
         source = ROOT / "docs" / name
@@ -163,7 +231,7 @@ def build_research_bundle(
         files.append((source, f"docs/{name}"))
 
     prefix = BUNDLE_ROOT.format(run_id=run_id)
-    readme = _readme(run_id, exported, coverage, factor_manifest)
+    readme = _readme(run_id, exported, coverage, factor_manifest, compact=compact)
     try:
         with zipfile.ZipFile(
             temporary,
@@ -174,6 +242,13 @@ def build_research_bundle(
         ) as archive:
             archive.writestr(f"{prefix}/README.md", readme)
             for source, relative in files:
+                if relative in rewritten:
+                    archive.writestr(
+                        f"{prefix}/{relative}",
+                        rewritten[relative],
+                        compress_type=zipfile.ZIP_DEFLATED,
+                    )
+                    continue
                 method = (
                     zipfile.ZIP_DEFLATED
                     if source.suffix.lower() in TEXT_SUFFIXES
@@ -199,6 +274,7 @@ def build_research_bundle(
         "bytes": target.stat().st_size,
         "sha256": digest,
         "files": len(files) + 1,
+        "compact": compact,
         "coverage": coverage.get("summary") or {},
         "parquet_rows": exported["parquet"]["daily_rows"],
         "duckdb": exported["duckdb"].get("status"),
@@ -210,11 +286,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("run_id", help="原始快照编号")
     parser.add_argument("--derived-dir", default="", help="派生层目录，默认 data/derived")
     parser.add_argument("--exports-dir", default="", help="输出目录，默认 exports")
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="省略与 DuckDB 重复的大体量 Parquet，生成小于完整版的研究包",
+    )
     args = parser.parse_args(argv)
     result = build_research_bundle(
         args.run_id,
         derived_dir=Path(args.derived_dir) if args.derived_dir else None,
         exports_dir=Path(args.exports_dir) if args.exports_dir else None,
+        compact=args.compact,
     )
     print(
         json.dumps(
@@ -224,6 +306,7 @@ def main(argv: list[str] | None = None) -> int:
                 "bytes": result["bytes"],
                 "sha256": result["sha256"],
                 "files": result["files"],
+                "compact": result["compact"],
                 "parquet_rows": result["parquet_rows"],
                 "duckdb": result["duckdb"],
             },

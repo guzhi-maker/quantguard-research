@@ -122,13 +122,23 @@ Parquet 行数: 2,868,954（按自然年分区）
 .\.venv\Scripts\python.exe tools\build_research_exports.py RAW-20261110-225213-E359DC --rebuild
 ```
 
-打包给成员 B/C 的研究交接 ZIP（含覆盖度、Parquet、DuckDB、原始 manifest 和文档，不含原始 CSV）：
+如需包含按年 Parquet 副本的完整研究包：
 
 ```powershell
 .\.venv\Scripts\python.exe tools\package_research_exports.py RAW-20261110-225213-E359DC
 ```
 
 目录结构、覆盖度口径、示例 SQL 和派生文件哈希见 [研究派生层与覆盖度审计](docs/research-exports.md)。
+
+课程交接推荐生成精简包。它省略与 DuckDB 重复的大体量 Parquet 分区，保留
+全部行情、因子和辅助数据：
+
+```powershell
+.\.venv\Scripts\python.exe tools\package_research_exports.py RAW-20261110-225213-E359DC --compact
+```
+
+输出 `exports/<run_id>_research_compact.zip`。当前包为 618,530,441 B，约 590 MiB；
+连同原始行情包和基本面包合计约 701 MiB，低于课程交接的 1 GB 限制。
 
 ## 24 因子面板
 
