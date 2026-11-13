@@ -384,8 +384,8 @@ class CollectorService:
         try:
             request = CollectionRequest.from_payload(payload)
             mode = str(payload.get("mode") or "agent").lower()
-            if mode not in {"agent", "fixed", "risk"}:
-                raise ValueError("任务模式只能是 agent、fixed 或 risk")
+            if mode not in {"agent", "fixed", "risk", "factors"}:
+                raise ValueError("任务模式只能是 agent、fixed、risk 或 factors")
 
             def emit(event: str, message: str, **extra: Any) -> None:
                 self._append_event(job_id, event, message, **extra)
@@ -398,6 +398,29 @@ class CollectorService:
                 )
                 self.risk_service = risk_service
                 result = risk_service.analyze(request, emit=emit)
+            elif mode == "factors":
+                from data_agent.factor_panel import build_factor_panel
+
+                run_id = str(payload.get("run_id") or "").strip()
+                if not run_id:
+                    runs = self.store.list_runs(1)
+                    if not runs:
+                        raise ValueError("没有可用于构建因子的原始快照")
+                    run_id = str(runs[0]["run_id"])
+                self.store.load_run(run_id)
+                emit("factors", "开始对齐公告日、分红与历史股本")
+                result = build_factor_panel(
+                    run_id,
+                    fund_id=str(payload.get("fund_id") or "").strip(),
+                    store=self.store,
+                    derived_dir=self.derived_dir,
+                    rebuild=bool(payload.get("rebuild")),
+                )
+                emit(
+                    "factors",
+                    f"因子面板完成: {result['summary']['rows']} 行",
+                    percent=100,
+                )
             elif mode == "agent":
                 factory = self.agent_factory
                 if factory is None:

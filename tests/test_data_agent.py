@@ -428,6 +428,10 @@ def test_collector_server_api_and_static_page(tmp_path):
             derived = json.loads(response.read().decode("utf-8"))
         assert derived["parquet"]["daily_rows"] == 108
 
+        with urlopen(f"{base}/api/runs/{run_id}/factors", timeout=5) as response:
+            factors = json.loads(response.read().decode("utf-8"))
+        assert factors == {"available": False, "raw_run_id": run_id}
+
         export_request = Request(
             f"{base}/api/runs/{run_id}/exports",
             data=b"{}",
@@ -460,6 +464,10 @@ def test_collector_server_api_and_static_page(tmp_path):
         assert 'id="coverageBuckets"' in html
         assert 'id="coverageYears"' in html
         assert 'id="buildExportsButton"' in html
+        assert 'id="factorTitle"' in html
+        assert 'id="factorDictionary"' in html
+        assert 'id="factorSnapshot"' in html
+        assert 'id="buildFactorButton"' in html
     finally:
         server.shutdown()
         server.server_close()

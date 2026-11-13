@@ -7,7 +7,8 @@ import path from "node:path";
 
 const EDGE = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const PORT = 9333;
-const URL = "http://127.0.0.1:8789/?layout=1";
+const BASE = process.env.QG_URL || "http://127.0.0.1:8789";
+const URL = `${BASE}/?layout=1`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitForJson(url, timeoutMs = 12000) {
@@ -97,6 +98,11 @@ async function collect(client, width, height) {
       coverageCompleteness: document.querySelector('#coverageCompleteness')?.textContent,
       coverageBuckets: document.querySelectorAll('.coverage-bar-row').length,
       coverageYears: document.querySelectorAll('.coverage-year-row').length,
+      factorEntries: document.querySelectorAll('.factor-entry').length,
+      factorSnapshotRows: document.querySelectorAll('.factor-snapshot-row').length,
+      factorState: document.querySelector('#factorState')?.textContent,
+      factorReadyRatio: document.querySelector('#factorReadyRatio')?.textContent,
+      factorRows: document.querySelector('#factorRows')?.textContent,
       reportTitle: document.querySelector('#reportTitle')?.textContent,
     })`,
   );
@@ -174,6 +180,9 @@ try {
     !interaction.poolOptions.includes('3000') ||
     !interaction.poolOptions.includes('5000') ||
     desktop.researchSteps !== 6 ||
+    desktop.factorEntries !== 24 ||
+    desktop.factorSnapshotRows !== 24 ||
+    !String(desktop.factorState || '').includes('可研究') ||
     interaction.before === interaction.after ||
     interaction.newsRows < 1 ||
     interaction.datasetOptions < 1 ||

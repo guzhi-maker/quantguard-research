@@ -11,6 +11,16 @@ from pathlib import Path
 from typing import Any
 
 from data_agent.agent import DeepSeekClient
+from data_agent.factor_panel import (
+    factor_file,
+    factor_sample,
+    factor_summary_for_api,
+)
+from data_agent.fundamentals import (
+    fundamental_file,
+    latest_fundamental_for_run,
+    load_fundamental_manifest,
+)
 from data_agent.research_exports import (
     build_research_exports,
     derived_file,
@@ -133,6 +143,69 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
                         .as_posix()
                     )
                     self._send_json(manifest)
+                    return
+                if len(parts) == 2 and parts[1] == "fundamentals":
+                    manifest = latest_fundamental_for_run(run_id)
+                    self._send_json(
+                        {
+                            "available": manifest is not None,
+                            "raw_run_id": run_id,
+                            "snapshot": manifest,
+                        }
+                    )
+                    return
+                if len(parts) == 2 and parts[1] == "fundamentals-file":
+                    relative_path = (query.get("path") or [""])[0]
+                    fund_id = (query.get("fund_id") or [""])[0]
+                    if not relative_path or not fund_id:
+                        raise ValueError("缺少基本面快照或文件路径")
+                    manifest = load_fundamental_manifest(fund_id)
+                    if manifest.get("source_run_id") != run_id:
+                        raise ValueError("基本面快照不属于当前行情快照")
+                    path = fundamental_file(fund_id, relative_path)
+                    self._send_file(
+                        path,
+                        path.name,
+                        mimetypes.guess_type(path.name)[0]
+                        or "application/octet-stream",
+                    )
+                    return
+                if len(parts) == 2 and parts[1] == "factors":
+                    try:
+                        result = factor_summary_for_api(
+                            run_id, derived_dir=self._service().derived_dir
+                        )
+                        self._send_json({"available": True, **result})
+                    except FileNotFoundError:
+                        self._send_json(
+                            {"available": False, "raw_run_id": run_id}
+                        )
+                    return
+                if len(parts) == 2 and parts[1] == "factor-sample":
+                    self._send_json(
+                        factor_sample(
+                            run_id,
+                            limit=int((query.get("limit") or ["20"])[0]),
+                            query=(query.get("q") or [""])[0],
+                            derived_dir=self._service().derived_dir,
+                        )
+                    )
+                    return
+                if len(parts) == 2 and parts[1] == "factor-file":
+                    relative_path = (query.get("path") or [""])[0]
+                    if not relative_path:
+                        raise ValueError("缺少因子文件路径")
+                    path = factor_file(
+                        run_id,
+                        relative_path,
+                        derived_dir=self._service().derived_dir,
+                    )
+                    self._send_file(
+                        path,
+                        path.name,
+                        mimetypes.guess_type(path.name)[0]
+                        or "application/octet-stream",
+                    )
                     return
                 if len(parts) == 2 and parts[1] == "coverage":
                     self._send_json(

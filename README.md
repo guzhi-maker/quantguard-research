@@ -28,6 +28,7 @@
 - **资讯与风险提醒**：检索近 30 天新闻和公司公告，用风险词典标记待核验线索；标题不能被模型外推为确定结论。
 - **建模交接**：明确未来 5/20 日收益标签、时间切分、泄漏检查、IC/RankIC、分层回测、组合约束和成本敏感性。
 - **覆盖度审计与列式导出**：记录快照交易日、每股历史长度、首末日期和区间缺口，并生成按年分区的 Parquet 与 DuckDB；原始 CSV 保持不变，可随时重建复核。
+- **24 因子研究面板**：按成员 C 的最小完备因子集生成价值、质量、成长、量价 Alpha 和风险中性五组因子；财务按公告日对齐，股本按生效日对齐，分红按除息日对齐，并提供 Parquet、DuckDB、因子字典和覆盖审计。
 
 ## 快速开始
 
@@ -123,6 +124,31 @@ Parquet 行数: 2,868,954（按自然年分区）
 
 目录结构、覆盖度口径、示例 SQL 和派生文件哈希见 [研究派生层与覆盖度审计](docs/research-exports.md)。
 
+## 24 因子面板
+
+当前全量结果对应行情快照 `RAW-20261110-225213-E359DC` 与基本面快照
+`FUND-20261113-222652-101412`：
+
+```text
+股票: 2,983
+证券-日: 2,868,954
+24 因子齐全: 2,769,089（96.52%）
+交易日: 2022-07-19 至 2026-11-10
+```
+
+构建命令：
+
+```powershell
+.\.venv\Scripts\python.exe tools\build_factor_panel.py `
+  RAW-20261110-225213-E359DC `
+  --fund-id FUND-20261113-222652-101412 --rebuild
+```
+
+产物位于 `data/derived/<run_id>/factors/`，包含按年分区的 `factor_panel`、
+`factors.duckdb`、季度财务、股本、分红、不复权价格、沪深 300、因子字典、覆盖度
+和 manifest。完整公式、已知边界和网页抽查口径见
+[A 股多因子数据采集标准](docs/factor-data-standard.md)。
+
 ## 个股研究报告
 
 “股票风险体检”默认用 `600519,300750,601318` 作为课堂示例。每次报告都会重新抓取真实行情，并把结果保存为独立 `AUDIT-*` 文件。
@@ -179,6 +205,10 @@ manifest 记录请求参数、来源、复权口径、行数、日期范围、�
 - `GET /api/runs/{run_id}/coverage`：读取覆盖度审计摘要、年度分布和缺口说明。
 - `GET /api/runs/{run_id}/derived`：读取 Parquet、DuckDB 与派生层 manifest。
 - `GET /api/runs/{run_id}/derived-file?path=...`：下载指定派生文件。
+- `GET /api/runs/{run_id}/fundamentals`：读取基本面快照摘要与文件清单。
+- `GET /api/runs/{run_id}/factors`：读取 24 因子字典、覆盖度、来源和 DuckDB 清单。
+- `GET /api/runs/{run_id}/factor-sample?limit=30&q=...`：读取最近交易日的因子横截面。
+- `GET /api/runs/{run_id}/factor-file?path=...`：下载因子 Parquet、DuckDB、字典或 manifest。
 - `POST /api/runs/{run_id}/exports`：生成派生层，可传 `{"rebuild": true}` 重建。
 - `POST /api/jobs`：创建 `fixed` 数据池采集、`agent` 智能体采集或 `risk` 研究报告任务。
 - `GET /api/jobs/{job_id}`：读取进度、事件和结果。
@@ -192,6 +222,9 @@ data_agent/
 ├── agent.py             # DeepSeek function calling 与工具循环
 ├── catalog.py           # 数据源注册表
 ├── collect_dataset.py   # 三千股断点续采 CLI
+├── collect_fundamentals.py # 财务、股本、分红、不复权价采集 CLI
+├── fundamentals.py      # FUND-* 快照与来源血缘
+├── factor_panel.py      # 24 因子时点对齐、覆盖审计与 DuckDB
 ├── news_client.py       # 新闻与公告检索
 ├── research_exports.py  # 覆盖度审计、Parquet 与 DuckDB 派生层
 ├── risk.py              # 指标、核价、规则预警与研究链
@@ -202,6 +235,7 @@ data_agent/
 └── static/              # 研究数据台前端
 tools/
 ├── build_research_exports.py    # 生成覆盖度与列式导出
+├── build_factor_panel.py        # 重建 24 因子面板
 ├── package_research_exports.py  # 打包课程交接 ZIP
 └── verify_snapshot.py           # 独立复核原始快照
 webapp/

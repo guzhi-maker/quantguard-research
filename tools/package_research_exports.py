@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from data_agent.research_exports import load_research_exports  # noqa: E402
+from data_agent.factor_panel import load_factor_manifest  # noqa: E402
 from data_agent.store import CHINA_TZ, RawRunStore  # noqa: E402
 
 BUNDLE_ROOT = "RESEARCH-{run_id}"
@@ -36,10 +37,39 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _readme(run_id: str, manifest: dict, coverage: dict) -> str:
+def _readme(
+    run_id: str,
+    manifest: dict,
+    coverage: dict,
+    factor_manifest: dict | None = None,
+) -> str:
     summary = coverage.get("summary") or {}
     parquet = (manifest.get("parquet") or {}).get("daily_rows")
     duckdb = (manifest.get("duckdb") or {}).get("status")
+    factor_summary = (factor_manifest or {}).get("summary") or {}
+    factor_note = ""
+    factor_quality_note = ""
+    if factor_manifest:
+        factor_note = (
+            f"- 多因子面板：{factor_summary.get('symbols', 0):,} 只股票、"
+            f"{factor_summary.get('rows', 0):,} 行；24 个正式因子可用率 "
+            f"{factor_summary.get('factor_ready_ratio', 0) * 100:.1f}%\n"
+        )
+        quality = factor_manifest.get("quality") or {}
+        sources = (
+            (factor_manifest.get("source_summary") or {})
+            .get("unadjusted_price_rows_by_source")
+            or {}
+        )
+        source_text = " / ".join(
+            f"{name} {int(rows):,} 行" for name, rows in sources.items()
+        )
+        factor_quality_note = (
+            "- 因子质量门控：剔除 "
+            f"{quality.get('financial_rows_without_ann_date_excluded', 0)} 条无公告日财务记录；"
+            f"金融模板规则为“{quality.get('financial_template_rule', '未记录')}”；"
+            f"不复权价来源 {source_text or '未记录'}\n"
+        )
     return f"""# QuantGuard 研究交接包
 
 - 快照编号：`{run_id}`
@@ -50,6 +80,8 @@ def _readme(run_id: str, manifest: dict, coverage: dict) -> str:
 - 每股记录中位数：{summary.get("rows_per_symbol", {}).get("median")}
 - 生命周期完整度：{summary.get("lifetime_completeness")}
 - Parquet 行数：{parquet:,}（DuckDB 状态：{duckdb}）
+{factor_note}
+{factor_quality_note}
 
 ## 目录
 
@@ -57,6 +89,10 @@ def _readme(run_id: str, manifest: dict, coverage: dict) -> str:
 coverage.json                 覆盖度审计摘要与限制
 coverage_by_symbol.csv        全部股票的历史长度、缺口和首末日期
 coverage_by_year.csv          年度交易日与记录数
+factors/factor_panel/         按年分区的 24 因子研究面板
+factors/factors.duckdb        因子、财务、股本、分红和日线联合数据库
+factors/factor_manifest.json  因子口径、覆盖与 SHA256
+factors/factor_dictionary.csv 24 因子字典与使用建议
 parquet/market_daily/         按年分区的日线 Parquet（zstd）
 parquet/market_quotes.parquet 抓取时点最新行情
 parquet/universe.parquet      抓取时点流动性股票池
@@ -99,6 +135,10 @@ def build_research_bundle(
         Path(derived_dir or ROOT / "data" / "derived") / run_id / "coverage.json"
     )
     coverage = json.loads(coverage_path.read_text(encoding="utf-8"))
+    try:
+        factor_manifest = load_factor_manifest(run_id, derived_dir=derived_dir)
+    except FileNotFoundError:
+        factor_manifest = None
     source_root = Path(derived_dir or ROOT / "data" / "derived") / run_id
     raw_manifest = store.manifest_dir / f"{run_id}.json"
     if not raw_manifest.is_file():
@@ -116,14 +156,14 @@ def build_research_bundle(
         if path.is_file():
             files.append((path, path.relative_to(source_root).as_posix()))
     files.append((raw_manifest, "raw_manifest.json"))
-    for name in ("dataset-card.md", "research-exports.md"):
+    for name in ("dataset-card.md", "research-exports.md", "factor-data-standard.md"):
         source = ROOT / "docs" / name
         if not source.is_file():
             raise FileNotFoundError(f"缺少交接文档: {source}")
         files.append((source, f"docs/{name}"))
 
     prefix = BUNDLE_ROOT.format(run_id=run_id)
-    readme = _readme(run_id, exported, coverage)
+    readme = _readme(run_id, exported, coverage, factor_manifest)
     try:
         with zipfile.ZipFile(
             temporary,

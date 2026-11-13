@@ -4,6 +4,11 @@ const state = {
   datasets: [],
   coverageByRun: {},
   exportsByRun: {},
+  factorsByRun: {},
+  fundamentalsByRun: {},
+  factorSamplesByRun: {},
+  activeFactorGroup: "all",
+  activeFactorSymbol: null,
   activeAudit: null,
   activeDatasetId: null,
   selectedSymbol: null,
@@ -242,6 +247,7 @@ async function loadDatasets() {
   state.datasets = payload.items || [];
   renderPool();
   await loadDerived(currentDataset()?.run_id);
+  await loadFactorData(currentDataset()?.run_id);
 }
 
 function appendDerivedLink(container, runId, label, path) {
@@ -385,6 +391,324 @@ async function loadDerived(runId) {
   if (currentDataset()?.run_id === runId) renderCoverage();
 }
 
+const FACTOR_GROUP_LABELS = {
+  all: "全部",
+  value: "价值",
+  quality: "质量",
+  growth: "成长",
+  price: "量价 Alpha",
+  risk: "风险中性",
+};
+
+function formatFactorValue(field, value, unit) {
+  if (value === null || value === undefined || value === "") return "—";
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(value);
+  if (field === "ln_cap" || field === "beta_20d") return number.toFixed(2);
+  if (unit === "ratio") return `${(number * 100).toFixed(2)}%`;
+  if (unit === "percent") return `${number.toFixed(2)}%`;
+  return number.toFixed(2);
+}
+
+function appendFactorLink(container, runId, label, path) {
+  if (!path) return;
+  const link = node("a", "text-link", label);
+  link.href = `/api/runs/${encodeURIComponent(runId)}/factor-file?path=${encodeURIComponent(path)}`;
+  container.append(link);
+}
+
+function appendFundamentalLink(container, runId, fundId, label, path) {
+  if (!path || !fundId) return;
+  const link = node("a", "text-link", label);
+  link.href = `/api/runs/${encodeURIComponent(runId)}/fundamentals-file?fund_id=${encodeURIComponent(fundId)}&path=${encodeURIComponent(path)}`;
+  container.append(link);
+}
+
+function currentFactorSample() {
+  const runId = currentDataset()?.run_id;
+  return runId ? state.factorSamplesByRun[runId] : null;
+}
+
+function currentFactorFactors() {
+  const runId = currentDataset()?.run_id;
+  return runId ? state.factorsByRun[runId]?.by_factor || null : null;
+}
+
+function renderFactorGroups(factors) {
+  const container = $("#factorGroupTabs");
+  clear(container);
+  if (!factors) return;
+  const groups = ["all", ...new Set(Object.values(factors).map((item) => item.group))];
+  groups.forEach((group) => {
+    const button = node("button", "segment-button", FACTOR_GROUP_LABELS[group] || group);
+    button.type = "button";
+    button.dataset.group = group;
+    button.setAttribute("role", "tab");
+    button.classList.toggle("is-active", state.activeFactorGroup === group);
+    button.addEventListener("click", () => {
+      state.activeFactorGroup = group;
+      renderFactorPanel();
+    });
+    container.append(button);
+  });
+}
+
+function renderFactorDictionary(factors) {
+  const container = $("#factorDictionary");
+  const meta = $("#factorCatalogMeta");
+  clear(container);
+  if (!factors) {
+    meta.textContent = "等待因子面板";
+    container.append(node("div", "factor-dictionary-empty", "当前快照还没有因子面板。"));
+    return;
+  }
+  const entries = Object.entries(factors).filter(([, item]) => (
+    state.activeFactorGroup === "all" || item.group === state.activeFactorGroup
+  ));
+  meta.textContent = `${entries.length} / 24 因子 · 公告日对齐 · 可回溯`;
+  if (!entries.length) {
+    container.append(node("div", "factor-dictionary-empty", "该分组暂无因子。"));
+    return;
+  }
+  entries.forEach(([field, item]) => {
+    const entry = node("article", "factor-entry");
+    const code = node("div", "factor-code");
+    code.append(
+      node("strong", "", field),
+      node("span", "factor-coverage", `${(Number(item.coverage || 0) * 100).toFixed(1)}% / ${formatInteger(item.symbols)} 只`),
+    );
+    const copy = node("div", "factor-copy");
+    const head = node("div", "factor-copy-head");
+    head.append(
+      node("strong", "", item.label),
+      node("span", "", item.as_of_rule),
+    );
+    copy.append(
+      head,
+      node("p", "", item.meaning),
+      node("p", "", item.usage),
+      node("code", "", item.formula),
+    );
+    entry.append(code, copy);
+    container.append(entry);
+  });
+}
+
+function populateFactorSampleOptions(samples, factors) {
+  const select = $("#factorStockSelect");
+  const datalist = $("#factorStockOptions");
+  clear(select);
+  clear(datalist);
+  const rows = samples?.rows || [];
+  if (!rows.length) {
+    select.append(new Option("暂无可抽查股票", ""));
+    select.disabled = true;
+    return;
+  }
+  select.disabled = false;
+  rows.forEach((row) => {
+    select.append(new Option(`${row.name} · ${row.symbol}`, row.symbol));
+    const option = node("option");
+    option.value = `${row.symbol} ${row.name}`;
+    datalist.append(option);
+  });
+  const selected = rows.some((row) => row.symbol === state.activeFactorSymbol)
+    ? state.activeFactorSymbol
+    : rows[0].symbol;
+  state.activeFactorSymbol = selected;
+  select.value = selected;
+  $("#factorSnapshotDate").textContent = samples.latest_date || "—";
+  if (!factors) return;
+}
+
+function renderFactorSnapshot(factors) {
+  const summary = $("#factorSnapshotSummary");
+  const container = $("#factorSnapshot");
+  clear(summary);
+  clear(container);
+  const samples = currentFactorSample();
+  const row = (samples?.rows || []).find((item) => item.symbol === state.activeFactorSymbol);
+  if (!row || !factors) {
+    container.append(node("div", "factor-dictionary-empty", "选择股票后查看最近交易日的因子值。"));
+    return;
+  }
+  const status = row.factor_ready ? "24 因子齐全" : "部分因子缺失";
+  const missing = row.missing_groups
+    ? row.missing_groups.split(",").map((item) => FACTOR_GROUP_LABELS[item] || item).join(" / ")
+    : "无";
+  [
+    ["股票", `${row.name} · ${row.symbol}`],
+    ["申万行业", `${row.industry || "未分类"}`],
+    ["财报期", row.report_date || "—"],
+    ["公告日", row.ann_date || "—"],
+    ["可用状态", status],
+    ["缺失因子组", missing || "无"],
+  ].forEach(([label, value]) => {
+    const cell = node("div");
+    cell.append(node("span", "", label), node("strong", "", value));
+    summary.append(cell);
+  });
+  Object.entries(factors)
+    .filter(([, item]) => state.activeFactorGroup === "all" || item.group === state.activeFactorGroup)
+    .forEach(([field, item]) => {
+      const factorRow = node("div", "factor-snapshot-row");
+      factorRow.append(
+        node("span", "", `${item.label} · ${field}`),
+        node("strong", "", formatFactorValue(field, row[field], item.unit)),
+        node("small", "", `${item.formula} · ${item.as_of_rule}`),
+      );
+      container.append(factorRow);
+    });
+}
+
+function renderFactorPanel() {
+  const runId = currentDataset()?.run_id;
+  const factors = runId ? state.factorsByRun[runId] : null;
+  const fundamentals = runId ? state.fundamentalsByRun[runId] : null;
+  const available = Boolean(factors?.available);
+  const snapshot = factors?.summary || {};
+  const fundSnapshot = fundamentals?.snapshot || {};
+  const fundSummary = fundSnapshot.summary || {};
+  const buildButton = $("#buildFactorButton");
+  const links = $("#factorLinks");
+  clear(links);
+  buildButton.hidden = available || !fundamentals?.available || !runId;
+  buildButton.disabled = false;
+  buildButton.textContent = "构建因子面板";
+
+  if (!runId) {
+    $("#factorState").textContent = "暂无快照";
+    ["#factorReadyRatio", "#factorRows", "#factorSymbols", "#factorDate"].forEach((selector) => {
+      $(selector).textContent = "—";
+    });
+    renderFactorGroups(null);
+    renderFactorDictionary(null);
+    renderFactorSnapshot(null);
+    return;
+  }
+
+  if (fundamentals?.available) {
+    const priceSources = factors?.source_summary?.unadjusted_price_rows_by_source || {};
+    const sourceText = Object.entries(priceSources)
+      .map(([source, rows]) => `${source} ${formatInteger(rows)} 行`)
+      .join(" / ");
+    $("#fundamentalState").textContent = `基本面 ${fundSnapshot.fund_id} · 财务 ${formatInteger(fundSummary.financial_rows)} 行 · 股本 ${formatInteger(fundSummary.share_capital_rows)} 行 · 分红 ${formatInteger(fundSummary.dividend_rows)} 行 · 不复权价 ${formatInteger(fundSummary.unadjusted_price_rows)} 行${sourceText ? ` · 来源 ${sourceText}` : ""}`;
+    appendFundamentalLink(links, runId, fundSnapshot.fund_id, "财务 CSV", "financials.csv");
+    appendFundamentalLink(links, runId, fundSnapshot.fund_id, "股本 CSV", "share_capital.csv");
+    appendFundamentalLink(links, runId, fundSnapshot.fund_id, "分红 CSV", "dividends.csv");
+    appendFundamentalLink(links, runId, fundSnapshot.fund_id, "不复权价 CSV", "prices_unadjusted.csv");
+    appendFundamentalLink(links, runId, fundSnapshot.fund_id, "沪深300 CSV", "index_daily.csv");
+    appendFundamentalLink(links, runId, fundSnapshot.fund_id, "公司资料 CSV", "profiles.csv");
+  } else {
+    $("#fundamentalState").textContent = "当前行情快照尚未采集基本面数据";
+  }
+
+  if (!available) {
+    $("#factorState").textContent = "尚未构建";
+    ["#factorReadyRatio", "#factorRows", "#factorSymbols", "#factorDate"].forEach((selector) => {
+      $(selector).textContent = "—";
+    });
+    renderFactorGroups(null);
+    renderFactorDictionary(null);
+    renderFactorSnapshot(null);
+    return;
+  }
+
+  $("#factorState").textContent = `可研究 ${(Number(snapshot.factor_ready_ratio || 0) * 100).toFixed(1)}%`;
+  $("#factorReadyRatio").textContent = `${(Number(snapshot.factor_ready_ratio || 0) * 100).toFixed(1)}%`;
+  $("#factorRows").textContent = formatInteger(snapshot.rows);
+  $("#factorSymbols").textContent = formatInteger(snapshot.symbols);
+  $("#factorDate").textContent = snapshot.date_max || "—";
+  renderFactorGroups(factors.by_factor);
+  renderFactorDictionary(factors.by_factor);
+  populateFactorSampleOptions(currentFactorSample(), factors.by_factor);
+  renderFactorSnapshot(factors.by_factor);
+
+  appendFactorLink(links, runId, "因子字典 CSV", "factor_dictionary.csv");
+  appendFactorLink(links, runId, "因子 Manifest", "factor_manifest.json");
+  appendFactorLink(links, runId, "覆盖度 JSON", "factor_coverage.json");
+  appendFactorLink(links, runId, "季度财务 Parquet", "financials_quarterly.parquet");
+  appendFactorLink(links, runId, "因子 DuckDB", "factors.duckdb");
+  (fundamentalFiles(factors) || []).forEach(([year, path]) => {
+    appendFactorLink(links, runId, `${year} 因子 Parquet`, path);
+  });
+}
+
+function fundamentalFiles(factors) {
+  const files = factors?.files || {};
+  const years = Object.keys(files)
+    .filter((path) => path.startsWith("factor_panel/year="))
+    .map((path) => [path.match(/year=(\d{4})/)?.[1], path])
+    .filter(([year]) => year);
+  return years;
+}
+
+async function loadFactorData(runId) {
+  if (!runId) {
+    renderFactorPanel();
+    return;
+  }
+  $("#factorState").textContent = "读取中";
+  const [factorResult, fundResult] = await Promise.allSettled([
+    api(`/api/runs/${encodeURIComponent(runId)}/factors`),
+    api(`/api/runs/${encodeURIComponent(runId)}/fundamentals`),
+  ]);
+  if (factorResult.status === "fulfilled") {
+    state.factorsByRun[runId] = factorResult.value;
+  } else {
+    delete state.factorsByRun[runId];
+  }
+  if (fundResult.status === "fulfilled") {
+    state.fundamentalsByRun[runId] = fundResult.value;
+  } else {
+    delete state.fundamentalsByRun[runId];
+  }
+  if (state.factorsByRun[runId]?.available && !state.factorSamplesByRun[runId]) {
+    try {
+      state.factorSamplesByRun[runId] = await api(`/api/runs/${encodeURIComponent(runId)}/factor-sample?limit=30`);
+    } catch (error) {
+      toast(error.message, true);
+    }
+  }
+  if (currentDataset()?.run_id === runId) renderFactorPanel();
+}
+
+async function refreshFactorSample() {
+  const runId = currentDataset()?.run_id;
+  if (!runId) return;
+  const query = $("#factorStockQuery").value.trim();
+  try {
+    state.factorSamplesByRun[runId] = await api(
+      `/api/runs/${encodeURIComponent(runId)}/factor-sample?limit=30&q=${encodeURIComponent(query)}`,
+    );
+    state.activeFactorSymbol = null;
+    renderFactorPanel();
+  } catch (error) {
+    toast(error.message, true);
+  }
+}
+
+async function buildFactorPanel() {
+  const runId = currentDataset()?.run_id;
+  if (!runId) return;
+  const button = $("#buildFactorButton");
+  button.disabled = true;
+  button.textContent = "构建中";
+  try {
+    const job = await api("/api/jobs", {
+      method: "POST",
+      body: JSON.stringify({ mode: "factors", run_id: runId, rebuild: false }),
+    });
+    state.jobKind = "factors";
+    renderJob(job);
+    pollJob(job.id);
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "构建因子面板";
+    toast(error.message, true);
+  }
+}
+
 async function buildResearchExports() {
   const runId = currentDataset()?.run_id;
   if (!runId) return;
@@ -466,9 +790,10 @@ function renderJob(job) {
   const panel = $("#jobPanel");
   panel.hidden = false;
   const isDataset = state.jobKind === "dataset";
+  const isFactors = state.jobKind === "factors";
   $("#jobTitle").textContent = status === "complete"
-    ? (isDataset ? "采集完成" : "研判完成")
-    : (isDataset ? "正在采集数据池" : "正在研判");
+    ? (isFactors ? "因子面板完成" : isDataset ? "采集完成" : "研判完成")
+    : (isFactors ? "正在构建因子面板" : isDataset ? "正在采集数据池" : "正在研判");
   $("#jobStage").textContent = labels[status] || status;
   $("#jobPercent").textContent = `${Math.round(Number(job.progress) || 0)}%`;
   $("#progressBar").style.width = `${Math.max(0, Math.min(100, Number(job.progress) || 0))}%`;
@@ -476,6 +801,7 @@ function renderJob(job) {
   const running = status === "queued" || status === "running";
   $("#collectButton").disabled = running;
   $("#analyzeButton").disabled = running;
+  $("#buildFactorButton").disabled = running;
   $("#collectButton").textContent = running && isDataset ? "采集中" : "采集数据池";
   $("#analyzeButton").textContent = running && !isDataset ? "研判中" : "生成研究报告";
   if (status === "failed") {
@@ -526,8 +852,16 @@ async function pollJob(jobId) {
     }
     if (job.status === "complete" && job.result) {
       $("#jobPanel").hidden = true;
+      const result = job.result || {};
+      if (jobKind === "factors") {
+        state.jobKind = null;
+        delete state.factorsByRun[result.raw_run_id];
+        delete state.factorSamplesByRun[result.raw_run_id];
+        await loadFactorData(result.raw_run_id || currentDataset()?.run_id);
+        toast(`因子面板已生成：${formatInteger(result.summary?.rows)} 行`);
+        return;
+      }
       if (jobKind === "dataset") {
-        const result = job.result || {};
         state.activeDatasetId = result.run_id || null;
         state.jobKind = null;
         await loadDatasets();
@@ -978,8 +1312,21 @@ async function init() {
     state.activeDatasetId = event.target.value;
     renderPool();
     loadDerived(state.activeDatasetId);
+    loadFactorData(state.activeDatasetId);
   });
   $("#buildExportsButton").addEventListener("click", buildResearchExports);
+  $("#buildFactorButton").addEventListener("click", buildFactorPanel);
+  $("#factorSampleButton").addEventListener("click", refreshFactorSample);
+  $("#factorStockQuery").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      refreshFactorSample();
+    }
+  });
+  $("#factorStockSelect").addEventListener("change", (event) => {
+    state.activeFactorSymbol = event.target.value;
+    renderFactorSnapshot(currentFactorFactors());
+  });
   $$(".tab").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeTab = button.dataset.tab;

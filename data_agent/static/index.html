@@ -106,6 +106,73 @@
         <div id="coverageIssues" class="coverage-issues"></div>
         <div id="coverageLinks" class="download-links"></div>
       </div>
+
+      <div class="factor-panel" aria-labelledby="factorTitle">
+        <header class="factor-head">
+          <div>
+            <span class="eyebrow">MULTI-FACTOR RESEARCH · 因子数据标准</span>
+            <h2 id="factorTitle">24 因子研究面板</h2>
+            <p>公告日对齐、前复权量价、历史股本与已实施分红均可追溯到原始快照。</p>
+          </div>
+          <div class="factor-actions">
+            <span id="factorState" class="quiet-badge">读取中</span>
+            <button id="buildFactorButton" class="secondary-button" type="button" hidden>构建因子面板</button>
+          </div>
+        </header>
+
+        <div class="factor-metrics">
+          <div><span>全因子可用率</span><strong id="factorReadyRatio">—</strong></div>
+          <div><span>证券-日面板</span><strong id="factorRows">—</strong></div>
+          <div><span>股票覆盖</span><strong id="factorSymbols">—</strong></div>
+          <div><span>最近截面</span><strong id="factorDate">—</strong></div>
+        </div>
+
+        <ol class="factor-pipeline" aria-label="因子生成链路">
+          <li><span>01</span><strong>公开数据</strong><small>行情 / 财务 / 股本 / 分红 / 沪深 300</small></li>
+          <li><span>02</span><strong>不可变快照</strong><small>原始文件与 SHA256 证据</small></li>
+          <li><span>03</span><strong>时点对齐</strong><small>公告日与除息日截断</small></li>
+          <li><span>04</span><strong>因子计算</strong><small>TTM / 同比 / 滚动风险</small></li>
+          <li><span>05</span><strong>研究交付</strong><small>Parquet / DuckDB / 字典</small></li>
+        </ol>
+
+        <div class="factor-workbench">
+          <section class="factor-catalog" aria-labelledby="factorCatalogTitle">
+            <div class="factor-subhead">
+              <div>
+                <h3 id="factorCatalogTitle">因子字典</h3>
+                <span id="factorCatalogMeta" class="factor-meta">等待因子面板</span>
+              </div>
+              <div id="factorGroupTabs" class="segmented-control" role="tablist" aria-label="因子组"></div>
+            </div>
+            <div id="factorDictionary" class="factor-dictionary"></div>
+          </section>
+
+          <section class="factor-inspector" aria-labelledby="factorInspectorTitle">
+            <div class="factor-subhead">
+              <div>
+                <h3 id="factorInspectorTitle">最近交易日抽查</h3>
+                <span id="factorSnapshotDate" class="factor-meta">—</span>
+              </div>
+              <label class="factor-stock-picker" for="factorStockSelect">
+                <span>股票</span>
+                <select id="factorStockSelect" aria-label="选择因子抽查股票"></select>
+              </label>
+              <div class="factor-lookup">
+                <input id="factorStockQuery" type="text" autocomplete="off" list="factorStockOptions" placeholder="代码或行业">
+                <button id="factorSampleButton" class="secondary-button" type="button">抽查</button>
+                <datalist id="factorStockOptions"></datalist>
+              </div>
+            </div>
+            <div id="factorSnapshotSummary" class="factor-snapshot-summary"></div>
+            <div id="factorSnapshot" class="factor-snapshot"></div>
+          </section>
+        </div>
+
+        <div class="factor-foot">
+          <div id="fundamentalState" class="factor-source-state">读取基本面快照</div>
+          <div id="factorLinks" class="download-links"></div>
+        </div>
+      </div>
     </section>
 
     <section class="intake" aria-labelledby="pageTitle">

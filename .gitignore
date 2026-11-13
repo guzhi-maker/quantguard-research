@@ -15,6 +15,7 @@ data/cache/
 data/raw/
 data/derived/
 data/audits/
+data/fundamentals/
 data/manifests/*.tmp
 data/curated/
 data/processed/

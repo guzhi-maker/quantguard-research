@@ -1,6 +1,6 @@
 // API and rendered-data contract checks for the local QuantGuard service.
 // Usage: node tools/check_api.mjs
-const BASE = "http://127.0.0.1:8789";
+const BASE = process.env.QG_URL || "http://127.0.0.1:8789";
 
 async function json(path) {
   const response = await fetch(`${BASE}${path}`);
