@@ -48,3 +48,19 @@ htmlcov/
 server*.log
 collect-*.log
 layout-*.html
+
+# v2 运行产物（只保留少量样本）
+v2/artifacts/*
+!v2/artifacts/samples/
+!v2/artifacts/samples/**
+
+# 本地临时脚本与打包目录
+.scratch/
+dist/
+*.zip
+
+# 打包/安装残留
+pydeps/
+wheels/
+tmp/
+pip-*/

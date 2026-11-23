@@ -1,0 +1,393 @@
+/* v2 组合研究页：只追加样式，不改动 styles.css 的既有规则。 */
+
+.v2-nav {
+  display: flex;
+  gap: 18px;
+  margin-left: auto;
+  margin-right: 24px;
+  font-size: 14px;
+}
+
+.v2-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 4px 2px;
+  border-bottom: 2px solid transparent;
+}
+
+.v2-nav a:hover {
+  color: var(--accent);
+}
+
+.v2-nav a.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.v2-workspace {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+  display: grid;
+  gap: 22px;
+}
+
+.v2-panel,
+.v2-section {
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+}
+
+.v2-section h2 {
+  margin: 0 0 14px;
+  font-size: 18px;
+  letter-spacing: 0.01em;
+}
+
+.v2-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px 18px;
+  margin-top: 18px;
+  align-items: end;
+}
+
+.v2-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.v2-field-wide {
+  grid-column: 1 / -1;
+}
+
+.v2-field span {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.v2-field b {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.v2-field em {
+  font-style: normal;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.v2-field small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.v2-field select,
+.v2-field input[type="text"],
+.v2-field input[type="number"] {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.v2-field input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.v2-check {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.v2-form .primary-button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 11px 26px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v2-form .primary-button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.v2-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  font-size: 14px;
+}
+
+.v2-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.v2-pill.failed {
+  background: var(--danger);
+}
+
+.v2-pill.done {
+  background: var(--accent);
+}
+
+.v2-muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.v2-error {
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.v2-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.v2-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--surface);
+}
+
+.v2-card .label {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.v2-card .value {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--ink);
+  word-break: break-all;
+}
+
+.v2-card .sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.v2-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.v2-check-item {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.v2-check-item.ok {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.v2-check-item.bad {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.v2-check-item.skip {
+  border-style: dashed;
+}
+
+.v2-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.v2-table-wrap {
+  overflow-x: auto;
+}
+
+.v2-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  margin-top: 10px;
+}
+
+.v2-table th,
+.v2-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.v2-table th:first-child,
+.v2-table td:first-child {
+  text-align: left;
+}
+
+.v2-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12.5px;
+  background: var(--surface);
+}
+
+.v2-table tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+.v2-table .strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.v2-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.v2-dim {
+  border-left: 4px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+}
+
+.v2-dim.red {
+  border-left-color: var(--danger);
+}
+
+.v2-dim.yellow {
+  border-left-color: var(--warning);
+}
+
+.v2-dim.green {
+  border-left-color: var(--accent);
+}
+
+.v2-dim h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.v2-dim .status {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.v2-dim .status.red {
+  color: var(--danger);
+}
+
+.v2-dim .status.yellow {
+  color: var(--warning);
+}
+
+.v2-dim .status.green {
+  color: var(--accent);
+}
+
+.v2-dim p {
+  margin: 4px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.v2-download {
+  margin-top: 14px;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.v2-download:hover {
+  background: var(--accent-soft);
+}
+
+@media (max-width: 720px) {
+  .v2-workspace {
+    padding: 18px 14px 48px;
+  }
+  .v2-panel,
+  .v2-section {
+    padding: 18px 16px;
+  }
+  .v2-nav {
+    display: none;
+  }
+}
+
+.v2-details {
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 10px;
+}
+
+.v2-details summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.v2-details summary:hover {
+  text-decoration: underline;
+}

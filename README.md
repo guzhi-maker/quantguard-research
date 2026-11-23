@@ -31,6 +31,56 @@
 - **建模交接**：明确未来 5/20 日收益标签、时间切分、泄漏检查、IC/RankIC、分层回测、组合约束和成本敏感性。
 - **覆盖度审计与列式导出**：记录快照交易日、每股历史长度、首末日期和区间缺口，并生成按年分区的 Parquet 与 DuckDB；原始 CSV 保持不变，可随时重建复核。
 - **24 因子研究面板**：按成员 C 的最小完备因子集生成价值、质量、成长、量价 Alpha 和风险中性五组因子；财务按公告日对齐，股本按生效日对齐，分红按除息日对齐，并提供 Parquet、DuckDB、因子字典和覆盖审计。
+- **研究流水线 v2**：分位数主模型 + 自适应区间校准 + 排序组合 + 六维持仓诊断 + 建议引擎 + AI 证据包；默认 10 特征、3 种子、无元模型，按风险偏好输出五档组合阶梯。
+
+## 数据工作台（网页）
+
+`python run_server.py --port 8789` 后打开 `http://127.0.0.1:8789/`，从上到下四步：
+
+| 步骤 | 位置 | 做什么 |
+| --- | --- | --- |
+| 1. 采集数据池 | 左上表单 | 选股票数与历史天数，点"采集数据池" |
+| 2. 选快照 | "历史快照"下拉框 | 选中要处理的快照 |
+| 3. 生成研究导出 | 覆盖度区右上 | 点"生成研究导出"，得到覆盖度、Parquet、DuckDB |
+| 4. 采集基本面 | 因子区底部 | 点"采集基本面"（后台任务，可看进度） |
+| 5. 构建因子面板 | 因子区右上 | 采集完成后按钮出现，点击生成 24 因子面板 |
+
+右侧"股票风险体检"是独立入口：输入最多 8 个代码、选 60/120/250 日窗口，点"生成研究报告"，
+会逐只重采、双源核价、检索资讯并调用 DeepSeek 生成风险简报。
+
+## 研究流水线 v2
+
+`v2/` 是新增的建模与迭代层（`v2/research/` + `v2/cli.py`），只读 `data/raw/` 下的快照，不改动采集、落盘与网页代码。
+
+- [三份报告](v2/docs/reports/01-usage-and-simulation.md)：使用说明与模拟、构建过程、PPT 建议
+- [网页版组合研究](v2/README.md#网页版组合研究页)：`python run_server.py` 后打开 `/v2.html`
+- [完整示范 v2](v2/docs/walkthrough-v2.md)：2500 日快照 + 真实行业，从采集到选股的完整流程
+- [使用说明](v2/docs/usage.md)：环境、采集、两条默认命令、参数与输出含义
+- [模型与分析总结](v2/docs/summary.md)：当前结果、决策依据、局限与下一步
+- [模型构建思路报告](v2/docs/model-report.md)：数据取舍、特征与模型选择、消融对照
+- [设计与迭代记录](v2/docs/workflow.md)：九阶段设计、验收口径、变体实验与校准
+
+```powershell
+# 空仓：五档风险阶梯 + 推荐组合 + 整手建仓计划
+python v2/cli.py run --risk 5.5 --horizon 2
+
+# 已持股：额外输出六维诊断与加减仓建议，并生成简报
+python v2/cli.py run --risk 7 --horizon 2 `
+  --holdings "002242:0.30,601857:0.20,300760:0.10" --report
+
+# 组合层事后回测：净值为准，含换手缓冲与交易成本
+python v2/cli.py backtest --horizon 2 --risks 1,5.5,10 --modes optimize,index
+```
+
+默认只走一条路径：10 个固定特征 → 20 日行业中性标签 → 分位数模型（3 种子）→ 自适应校准 → 排序组合；
+元模型默认关闭，样本外 IC 低于 0.02 时自动切换为等权分散。期限三档（5/20/60 日），默认 20 日。
+`grid`、`experiment`、组合模式、标签变换等对比开关属于研究用途，用法见
+[进阶用法](v2/docs/workflow.md#14-进阶用法默认路径之外的可选项)，
+实测记录见 [迭代记录](v2/docs/workflow.md#11-迭代记录v10--v11)、
+[组合层回测](v2/docs/workflow.md#12-组合层回测v12) 与
+[600 交易日复跑](v2/docs/workflow.md#13-600-交易日数据复跑v13)。
+
+命令行的 `--report` 会调用 DeepSeek 生成简报；未配置 `DEEPSEEK_API_KEY` 时自动回退为规则模板，并在结果中记录原因。
 
 ## 快速开始
 
@@ -254,6 +304,30 @@ tools/
 ├── build_factor_panel.py        # 重建 24 因子面板
 ├── package_research_exports.py  # 打包课程交接 ZIP
 └── verify_snapshot.py           # 独立复核原始快照
+v2/                              # v2 交付目录，只读 data/raw
+├── cli.py                       # 命令行入口
+├── collect_long.py              # 长历史采集（腾讯 proxy 分页，2500 日）
+├── fetch_industry.py            # 抓取真实行业分类，生成映射表
+├── research/                    # 建模与分析代码
+│   ├── preferences.py           # 风险预算与期限偏好
+│   ├── panel.py                 # 面板与可成交性掩码
+│   ├── features.py              # 特征、中性化、去冗余、IC 衰减
+│   ├── labels.py                # 行业中性标签与防泄漏
+│   ├── primary.py               # 分位数主模型与区间校准
+│   ├── meta.py                  # 元模型仓位乘数
+│   ├── portfolio.py             # 均值-CVaR 组合与整手
+│   ├── diagnosis.py             # 六维持仓诊断
+│   ├── advice.py                # 建议引擎与预算
+│   ├── validation.py            # 时间折、DSR、PBO
+│   ├── scoring.py               # 滚动打分面板
+│   ├── backtest.py              # 组合层回测
+│   ├── evidence.py              # 六块证据包
+│   ├── report.py                # AI 报告与回退
+│   └── pipeline.py              # 端到端编排
+├── tests/test_research_v2.py    # 27 项验收测试
+├── docs/                        # 使用说明、完整示范、模型报告、设计记录
+├── data/industry_map.csv        # 离线行业映射
+└── artifacts/                   # 复跑结果 JSON
 webapp/
 ├── market_client.py     # 东方财富、腾讯、新浪真实行情连接器
 └── ...
@@ -269,12 +343,13 @@ tests/
 ```powershell
 $env:LOKY_MAX_CPU_COUNT='1'
 .\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m pytest tests\test_research_v2.py -q
 node --check data_agent\static\app.js
 node tools\check_api.mjs
 node tools\check_layout.mjs
 ```
 
-测试覆盖参数校验、原始 CSV、manifest、SHA256、来源血缘、分页、DeepSeek 工具循环、双源核价、14 项指标解释、六步研究链、新闻失败记录和 HTTP API。
+测试覆盖参数校验、原始 CSV、manifest、SHA256、来源血缘、分页、DeepSeek 工具循环、双源核价、14 项指标解释、六步研究链、新闻失败记录和 HTTP API。v2 流水线另有 16 项测试，覆盖标签不越界、偏好插值、中性化、分位数覆盖率、CVaR 阶梯单调、建议预算与安全豁免、证据包规模、报告校验与回退。
 
 `check_api.mjs` 和 `check_layout.mjs` 需要先启动本地服务；布局检查使用 Edge 的 DOM 模式，不需要截图。
 

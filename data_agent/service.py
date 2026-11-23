@@ -384,8 +384,8 @@ class CollectorService:
         try:
             request = CollectionRequest.from_payload(payload)
             mode = str(payload.get("mode") or "agent").lower()
-            if mode not in {"agent", "fixed", "risk", "factors"}:
-                raise ValueError("任务模式只能是 agent、fixed、risk 或 factors")
+            if mode not in {"agent", "fixed", "risk", "factors", "fundamentals"}:
+                raise ValueError("任务模式只能是 agent、fixed、risk、factors 或 fundamentals")
 
             def emit(event: str, message: str, **extra: Any) -> None:
                 self._append_event(job_id, event, message, **extra)
@@ -421,6 +421,57 @@ class CollectorService:
                     f"因子面板完成: {result['summary']['rows']} 行",
                     percent=100,
                 )
+            elif mode == "fundamentals":
+                from data_agent.fundamentals import collect_fundamentals
+                from webapp.market_client import normalize_symbol
+
+                run_id = str(payload.get("run_id") or "").strip()
+                if not run_id:
+                    runs = self.store.list_runs(1)
+                    if not runs:
+                        raise ValueError("没有可用于采集基本面的原始快照")
+                    run_id = str(runs[0]["run_id"])
+                manifest = self.store.load_run(run_id)
+                symbols = [
+                    normalize_symbol(symbol)
+                    for symbol in (manifest.get("request") or {}).get("symbols") or []
+                    if str(symbol).strip()
+                ]
+                limit = int(payload.get("limit") or 0)
+                if limit:
+                    symbols = symbols[: max(1, limit)]
+                if not symbols:
+                    raise ValueError("该快照没有可采集的股票")
+                emit("fundamentals", f"开始采集 {len(symbols)} 只股票的基本面")
+
+                def _progress(item: dict) -> None:
+                    done = int(item.get("done") or 0)
+                    total = int(item.get("total") or 1)
+                    percent = round(done / max(total, 1) * 100)
+                    emit(
+                        "fundamentals",
+                        f"{done}/{total} {item.get('symbol', '')}",
+                        percent=percent,
+                    )
+
+                result = collect_fundamentals(
+                    symbols,
+                    source_run_id=run_id,
+                    workers=int(payload.get("workers") or 8),
+                    include_prices=True,
+                    progress=_progress,
+                )
+                emit(
+                    "fundamentals",
+                    f"基本面快照完成：{result['fund_id']}",
+                    percent=100,
+                )
+                result = {
+                    "fund_id": result["fund_id"],
+                    "raw_run_id": run_id,
+                    "summary": result["summary"],
+                    "quality": result.get("quality"),
+                }
             elif mode == "agent":
                 factory = self.agent_factory
                 if factory is None:

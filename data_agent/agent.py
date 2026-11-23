@@ -106,7 +106,7 @@ class DeepSeekClient:
         except json.JSONDecodeError as exc:
             raise DeepSeekError("DeepSeek 返回内容不是有效 JSON") from exc
 
-    def chat(self, messages: list[dict], tools: list[dict]) -> dict:
+    def chat(self, messages: list[dict], tools: list[dict], max_tokens: int = 1200) -> dict:
         if not self.configured:
             raise DeepSeekError("未配置 DEEPSEEK_API_KEY")
         payload = {
@@ -115,7 +115,7 @@ class DeepSeekClient:
             "tools": tools,
             "tool_choice": "auto",
             "temperature": 0.1,
-            "max_tokens": 1200,
+            "max_tokens": int(max_tokens),
         }
         headers = {
             "Authorization": f"Bearer {self.api_key}",
