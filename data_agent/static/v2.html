@@ -61,16 +61,19 @@
         </label>
 
         <label class="v2-field">
-          <span>持仓数量</span>
+          <span>推荐持仓数（目标）</span>
           <select id="v2Positions">
-            <option value="0" selected>按档位（保守 50 / 平衡 15）</option>
+            <option value="0" selected>自动（随风险档位：保守 50 → 激进 6）</option>
+            <option value="6">6 只</option>
             <option value="10">10 只</option>
             <option value="15">15 只</option>
             <option value="20">20 只</option>
             <option value="25">25 只</option>
+            <option value="30">30 只</option>
             <option value="35">35 只</option>
+            <option value="50">50 只</option>
           </select>
-          <small>覆盖档位默认，适合不想持有太多标的</small>
+          <small>推荐组合装多少只；当前实际持仓请在下一栏填写</small>
         </label>
 
         <label class="v2-field">
@@ -83,8 +86,8 @@
         </label>
 
         <label class="v2-field v2-field-wide">
-          <span>模拟持仓（可选，格式 代码:权重，逗号分隔）</span>
-          <input id="v2Holdings" type="text" autocomplete="off" placeholder="例如 600519:0.2,300750:0.15，留空表示空仓">
+          <span>当前持仓（可选，格式 代码:权重，逗号分隔）</span>
+          <input id="v2Holdings" type="text" autocomplete="off" placeholder="例如 600519:0.2,300750:0.15；空仓请留空">
         </label>
 
         <label class="v2-check">

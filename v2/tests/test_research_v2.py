@@ -330,6 +330,33 @@ def test_report_validation_rejects_fabricated_numbers():
         assert section in fallback.text
 
 
+def test_evidence_has_holdings_and_field_guide():
+    import pandas as pd
+
+    pack = evidence_mod.build_evidence_pack(
+        run_id="RAW-TEST",
+        as_of="2026-01-01",
+        preference=preferences_mod.resolve(5.5, 2),
+        portfolios=[],
+        holdings=pd.Series({"600519": 0.2}),
+        predictions={},
+        meta_probability=pd.Series(dtype=float),
+        multipliers=pd.Series(dtype=float),
+        tradable=pd.Series(dtype=bool),
+        names=pd.Series(dtype=object),
+        attributions={},
+        diagnosis={"items": [], "red": 0, "yellow": 0, "headline": "空仓"},
+        advice={"actions": [], "budget": 5, "optimization_count": 0, "folded_count": 0},
+        model_info={"version": "test"},
+        data_quality={"data_hash": "abcd1234", "coverage": {}},
+        budget_info={"budget": 5},
+        has_holdings=False,
+    )
+    assert pack["user"]["has_holdings"] is False
+    assert "field_guide" in pack
+    assert any("attributions" in key for key in pack["field_guide"])
+
+
 def test_report_generate_without_key_falls_back():
     pack = {
         "meta": {"prompt_version": evidence_mod.PROMPT_VERSION},

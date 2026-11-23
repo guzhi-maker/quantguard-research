@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-PROMPT_VERSION = "qg-report-v2.0"
+PROMPT_VERSION = "qg-report-v2.1"
 TOKEN_LIMIT = 5000
 
 DISCLAIMER = "仅用于课程研究，不构成投资建议或收益承诺。"
@@ -21,7 +21,7 @@ LIMITATIONS = [
     "股票池是抓取时点的流动性快照，不是历史成分股，存在幸存者偏差。",
     "新闻标题只作为待核验线索，不能外推为确定结论。",
     "风险收益曲线右端的预期收益估计误差最大，不应视为可实现收益。",
-    "板块代理行业分类仅在原始行业字段缺失时使用。",
+    "行业分类为当前时点（证监会分类），不是历史时点分类，回看存在轻微前视偏差。",
     "全部收益指标为扣费后口径，费用模型为估算值。",
     DISCLAIMER,
 ]
@@ -84,6 +84,27 @@ def _stock_block(
     return rows
 
 
+FIELD_GUIDE = {
+    "portfolio.ladder[]": "五档组合，每档一行；数值均为小数（0.09 = 9%）",
+    "ladder[].cvar95": "最差 5% 月份的平均亏损比例，越大越危险",
+    "ladder[].expected_return": "扣费后的预期收益（与期限同口径）",
+    "ladder[].volatility": "年化波动率",
+    "ladder[].positions": "该档建议持有多少只股票",
+    "ladder[].cash_weight": "现金占比，等于 1 - 股票总仓位",
+    "ladder[].cost_estimate": "本次调仓的成本占资产比例",
+    "stocks[].weight": "该股票在组合中的目标权重",
+    "stocks[].P10/P50/P90": "未来收益的分位数预测；P10 是偏悲观情形",
+    "stocks[].meta_prob": "元模型判断本次预测可靠的概率；0.5 表示元模型未启用",
+    "stocks[].multiplier": "元模型给出的仓位乘数；1.0 表示不加权",
+    "stocks[].attributions": "[[特征名, 标准化值 z], ...]；z 是特征相对截面均值的强弱，"
+    "z>0 表示该特征值高于均值，z<0 表示低于均值；z 的正负与方向不代表收益方向",
+    "user.has_holdings": "是否提供了有效持仓（权重合计 > 0）",
+    "user.cvar_budget": "用户风险档位对应的 CVaR 预算",
+    "advice.folded": "因预算被折叠的优化建议条数",
+    "diagnosis.red/yellow": "红灯/黄灯诊断项数量",
+}
+
+
 def build_evidence_pack(
     *,
     run_id: str,
@@ -102,6 +123,7 @@ def build_evidence_pack(
     model_info: dict,
     data_quality: dict,
     budget_info: dict,
+    has_holdings: bool | None = None,
 ) -> dict:
     """组装证据包。所有数值都来自上游计算结果，本函数不做估计。"""
     ladder = []
@@ -135,7 +157,11 @@ def build_evidence_pack(
             "cvar_budget": _round(preference.risk["cvar95"]),
             "horizon_days": preference.horizon["days"],
             "horizon_label": preference.horizon["label"],
-            "has_holdings": bool(len(holdings)),
+            "has_holdings": (
+                bool(has_holdings)
+                if has_holdings is not None
+                else bool(len(holdings)) and float(holdings.sum()) > 0
+            ),
             "capital_band": data_quality.get("capital_band", "未提供"),
         },
         "portfolio": {
@@ -183,6 +209,7 @@ def build_evidence_pack(
             "post_feasible": advice.get("post_check", {}).get("feasible"),
         },
         "limits": LIMITATIONS,
+        "field_guide": FIELD_GUIDE,
     }
     return pack
 

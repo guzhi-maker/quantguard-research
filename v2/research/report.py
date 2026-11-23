@@ -24,6 +24,9 @@ SYSTEM_PROMPT = (
     "若证据包标注了被预算折叠的建议，请在结尾提示可在详情页查看。"
     "输出必须依次包含五个小标题：总体结论、组合层面权衡、个股重点、下一步应核对事项、数据限制。"
     "每个小标题下不超过 150 字，全文控制在 900 字以内；宁可少写，也不要把数字算错。"
+    "「组合层面权衡」必须至少覆盖：各档持仓数、现金比例、波动与成本中的三项，不能只讲 CVaR 单调。"
+    "attributions 中的 z 是特征相对截面均值的标准化值：正值表示该特征偏高，负值表示偏低；"
+    "禁止把负 z 描述为「得分较高」或「强度高」，只能描述为「偏低/偏高」。"
     "明确这是课程研究，不构成投资建议。"
 )
 
@@ -110,6 +113,28 @@ def validate_report(text: str, pack: dict) -> list[str]:
     for term in BANNED_TERMS:
         if term in body:
             issues.append(f"出现禁用表述：{term}")
+    tradeoff = ""
+    if "组合层面权衡" in body:
+        tradeoff = body.split("组合层面权衡", 1)[1]
+        for stop in SECTIONS[2:]:
+            if stop in tradeoff:
+                tradeoff = tradeoff.split(stop, 1)[0]
+                break
+    if tradeoff and not any(key in tradeoff for key in ("现金", "持仓")):
+        issues.append("组合层面权衡缺少现金或持仓数")
+
+    if any(term in body for term in ("得分较高", "得分高", "强度高")):
+        negative = False
+        for symbol_rows in pack.get("stocks", []):
+            for item in symbol_rows.get("attributions", []) or []:
+                try:
+                    if float(item[1]) < 0:
+                        negative = True
+                except (TypeError, ValueError, IndexError):
+                    continue
+        if negative:
+            issues.append("把负向归因描述为得分高")
+
     allowed = _allowed_values(pack)
     unknown = []
     for value in _numbers(body):

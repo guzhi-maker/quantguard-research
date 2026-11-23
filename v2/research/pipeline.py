@@ -609,10 +609,11 @@ def run_research(
     )
     monotonic = portfolio_mod.monotonic_cvar(portfolios)
 
-    holdings_series = pd.Series(holdings or {}, dtype=float)
+    holdings_input = pd.Series(holdings or {}, dtype=float)
+    holdings_series = holdings_input.reindex(panels.symbols).fillna(0.0) if len(holdings_input) else holdings_input
+    has_real_holdings = bool(len(holdings_input)) and float(holdings_series.sum()) > 0
     _step("持仓诊断")
     if holdings_series.any():
-        holdings_series = holdings_series.reindex(panels.symbols).fillna(0.0)
         diagnosis = diagnosis_mod.diagnose(
             holdings_series,
             preference,
@@ -636,11 +637,18 @@ def run_research(
             capital=capital,
         )
     else:
+        zero_weight = bool(holdings) and float(holdings_input.sum()) <= 0
+        unmatched = bool(holdings) and not zero_weight and not holdings_series.any()
+        headline = "空仓模式：未提供持仓，仅给出目标组合与建仓计划"
+        if zero_weight:
+            headline = "示例持仓权重合计为 0，按空仓处理：仅给出目标组合与建仓计划"
+        elif unmatched:
+            headline = "示例持仓未匹配到快照股票池，按空仓处理：仅给出目标组合与建仓计划"
         diagnosis = {
             "items": [],
             "red": 0,
             "yellow": 0,
-            "headline": "空仓模式：未提供持仓，仅给出目标组合与建仓计划",
+            "headline": headline,
             "metrics": {},
         }
         advice = {
@@ -721,6 +729,7 @@ def run_research(
         preference=preference,
         portfolios=portfolios,
         holdings=selected.weights if not holdings_series.any() else holdings_series[holdings_series > 0],
+        has_holdings=has_real_holdings,
         predictions=prediction_map,
         meta_probability=probability,
         multipliers=factors,
