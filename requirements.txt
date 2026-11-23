@@ -9,9 +9,13 @@ duckdb>=1.0
 
 # 行情数据源
 akshare>=1.12
+baostock>=0.8
 
 # 回测与金融计算（可选，未安装时自动退回内置向量化引擎）
 vectorbt>=0.26
+
+# v2 研究流水线：分位数主模型（可选，未安装时退回 sklearn 分位数回归）
+lightgbm>=4.0
 
 # LLM Agent 编排（可选，未安装时使用内置命令式编排）
 langchain>=0.2

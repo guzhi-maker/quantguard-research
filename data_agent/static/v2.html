@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="QuantGuard v2 组合研究：风险阶梯、选股、持仓诊断与建议">
+  <title>QuantGuard | v2 组合研究</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/v2.css">
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="QuantGuard 首页">
+      <span class="brand-mark">QG</span>
+      <span class="brand-copy"><strong>QuantGuard</strong><small>组合研究</small></span>
+    </a>
+    <nav class="v2-nav" aria-label="页面导航">
+      <a href="/">数据台</a>
+      <a href="/v2.html" class="active">组合研究</a>
+    </nav>
+    <div class="header-status" aria-label="任务状态">
+      <span class="status-item"><i id="v2Dot" class="status-dot"></i><span id="v2Status">就绪</span></span>
+    </div>
+  </header>
+
+  <main class="v2-workspace">
+    <section class="v2-panel">
+      <div class="intake-heading">
+        <div>
+          <span class="eyebrow">RESEARCH PIPELINE · 组合研究</span>
+          <h1>从快照到组合建议</h1>
+        </div>
+        <p class="pool-note">分位数模型 → 区间校准 → 风险阶梯 → 持仓诊断 → 建议</p>
+      </div>
+
+      <form id="v2Form" class="v2-form">
+        <label class="v2-field v2-field-wide">
+          <span>数据快照</span>
+          <select id="v2Snapshot"></select>
+          <small id="v2SnapshotHint">加载中…</small>
+        </label>
+
+        <label class="v2-field">
+          <span>风险档位 <b id="v2RiskValue">5.5</b> · <em id="v2RiskLabel">平衡</em></span>
+          <input id="v2Risk" type="range" min="1" max="10" step="0.5" value="5.5">
+          <small>1 保守 · 5.5 平衡 · 10 激进</small>
+        </label>
+
+        <label class="v2-field">
+          <span>期限</span>
+          <select id="v2Horizon">
+            <option value="1">5 交易日（短）</option>
+            <option value="2" selected>20 交易日（中）</option>
+            <option value="3">60 交易日（长）</option>
+          </select>
+        </label>
+
+        <label class="v2-field">
+          <span>本金（元）</span>
+          <input id="v2Capital" type="number" min="10000" step="10000" value="1000000">
+        </label>
+
+        <label class="v2-field">
+          <span>持仓数量</span>
+          <select id="v2Positions">
+            <option value="0" selected>按档位（保守 50 / 平衡 15）</option>
+            <option value="10">10 只</option>
+            <option value="15">15 只</option>
+            <option value="20">20 只</option>
+            <option value="25">25 只</option>
+            <option value="35">35 只</option>
+          </select>
+          <small>覆盖档位默认，适合不想持有太多标的</small>
+        </label>
+
+        <label class="v2-field">
+          <span>集成种子</span>
+          <select id="v2Seeds">
+            <option value="1">1（最快，约 1/3 时间）</option>
+            <option value="3" selected>3（默认）</option>
+            <option value="5">5（最稳）</option>
+          </select>
+        </label>
+
+        <label class="v2-field v2-field-wide">
+          <span>模拟持仓（可选，格式 代码:权重，逗号分隔）</span>
+          <input id="v2Holdings" type="text" autocomplete="off" placeholder="例如 600519:0.2,300750:0.15，留空表示空仓">
+        </label>
+
+        <label class="v2-check">
+          <input id="v2Report" type="checkbox">
+          <span>生成 AI 简报（需要 DeepSeek 密钥，失败会回退模板）</span>
+        </label>
+
+        <button class="primary-button" id="v2Run" type="submit">开始分析</button>
+      </form>
+
+      <div class="v2-status" id="v2JobBar" hidden>
+        <span class="v2-pill" id="v2Pill">排队中</span>
+        <span id="v2Stage">等待开始</span>
+        <span class="v2-muted" id="v2Elapsed"></span>
+      </div>
+      <p class="v2-error" id="v2Error" hidden></p>
+    </section>
+
+    <section id="v2Result" hidden>
+      <div class="v2-section">
+        <h2>概览</h2>
+        <div class="v2-grid" id="v2Overview"></div>
+      </div>
+
+      <div class="v2-section">
+        <h2>验收项</h2>
+        <div class="v2-checks" id="v2Checks"></div>
+        <p class="v2-hint" id="v2Warnings"></p>
+      </div>
+
+      <div class="v2-section">
+        <h2>风险阶梯</h2>
+        <div class="v2-table-wrap"><table class="v2-table" id="v2Ladder"></table></div>
+        <p class="v2-hint">CVaR 是“最差 5% 月份的平均亏损”，预期收益已扣费。</p>
+      </div>
+
+      <div class="v2-section">
+        <h2 id="v2SelectedTitle">推荐组合</h2>
+        <p class="v2-hint">
+          这是研究建议，不是买入指令。买不买、买几只、各买多少，由你决定。
+        </p>
+        <div class="v2-grid" id="v2SelectedSummary"></div>
+        <div class="v2-table-wrap"><table class="v2-table" id="v2Selected"></table></div>
+        <details class="v2-details">
+          <summary>执行参考：整手与金额（仅供参考）</summary>
+          <div class="v2-table-wrap"><table class="v2-table" id="v2SelectedLots"></table></div>
+        </details>
+      </div>
+
+      <div class="v2-section" id="v2PartialSection">
+        <h2>部分采纳：只买前 N 只</h2>
+        <p class="v2-hint">
+          候选名单不是账单。你可以只取前 N 只，并按比例放大到同样的总仓位；
+          放大后单票权重上升，风险随之集中，需要自己确认。
+        </p>
+        <div class="v2-table-wrap"><table class="v2-table" id="v2Partial"></table></div>
+      </div>
+
+      <div class="v2-section">
+        <h2>持仓诊断</h2>
+        <p class="v2-hint" id="v2DiagHeadline"></p>
+        <div class="v2-cards" id="v2Diagnosis"></div>
+      </div>
+
+      <div class="v2-section">
+        <h2>调仓参考（是否执行由你决定）</h2>
+        <p class="v2-hint" id="v2AdviceMeta"></p>
+        <div class="v2-table-wrap"><table class="v2-table" id="v2Advice"></table></div>
+      </div>
+
+      <div class="v2-section">
+        <h2>证据与产出</h2>
+        <div class="v2-grid" id="v2Evidence"></div>
+        <p class="v2-hint" id="v2ReportText"></p>
+        <button class="v2-download" id="v2Download" type="button">下载完整 JSON</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/v2.js"></script>
+</body>
+</html>

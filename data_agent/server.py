@@ -30,6 +30,7 @@ from data_agent.research_exports import (
 from data_agent.risk_service import RiskAnalysisService
 from data_agent.service import CollectorService
 from data_agent.store import VIEWS
+from data_agent import v2_api
 
 
 class CollectorRequestHandler(BaseHTTPRequestHandler):
@@ -266,6 +267,18 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
                 )
                 self._send_json(self._service().get_job(job_id))
                 return
+            if parsed.path == "/api/v2/snapshots":
+                self._send_json({"items": v2_api.list_snapshots(limit=30)})
+                return
+            if parsed.path == "/api/v2/jobs":
+                self._send_json({"items": v2_api.list_jobs(limit=12)})
+                return
+            if parsed.path.startswith("/api/v2/jobs/"):
+                job_id = urllib.parse.unquote(
+                    parsed.path.removeprefix("/api/v2/jobs/").strip("/")
+                )
+                self._send_json(v2_api.get_job(job_id))
+                return
             if parsed.path.startswith("/api/"):
                 self._send_error_json("未知 API", 404)
                 return
@@ -322,6 +335,9 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
                     {"items": self._service().search(keyword, limit=limit)}
                 )
                 return
+            if parsed.path == "/api/v2/jobs":
+                self._send_json(v2_api.start_job(payload), status=202)
+                return
             self._send_error_json("未知 API", 404)
         except (ValueError, TypeError) as exc:
             self._send_error_json(str(exc), 400)
@@ -340,7 +356,7 @@ class CollectorRequestHandler(BaseHTTPRequestHandler):
             return
         else:
             file_name = urllib.parse.unquote(path.lstrip("/"))
-            if file_name not in {"app.js", "styles.css", "index.html"}:
+            if file_name not in {"app.js", "styles.css", "index.html", "v2.html", "v2.js", "v2.css"}:
                 raise FileNotFoundError("页面资源不存在")
             target = static_root / file_name
         if not target.exists():

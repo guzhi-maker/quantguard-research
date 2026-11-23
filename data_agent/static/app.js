@@ -579,6 +579,10 @@ function renderFactorPanel() {
   buildButton.hidden = available || !fundamentals?.available || !runId;
   buildButton.disabled = false;
   buildButton.textContent = "构建因子面板";
+  const collectButton = $("#collectFundamentalsButton");
+  collectButton.hidden = Boolean(fundamentals?.available) || !runId;
+  collectButton.disabled = false;
+  collectButton.textContent = "采集基本面";
 
   if (!runId) {
     $("#factorState").textContent = "暂无快照";
@@ -688,6 +692,27 @@ async function refreshFactorSample() {
     state.activeFactorSymbol = null;
     renderFactorPanel();
   } catch (error) {
+    toast(error.message, true);
+  }
+}
+
+async function collectFundamentals() {
+  const runId = currentDataset()?.run_id;
+  if (!runId) return;
+  const button = $("#collectFundamentalsButton");
+  button.disabled = true;
+  button.textContent = "采集中";
+  try {
+    const job = await api("/api/jobs", {
+      method: "POST",
+      body: JSON.stringify({ mode: "fundamentals", run_id: runId }),
+    });
+    state.jobKind = "fundamentals";
+    renderJob(job);
+    pollJob(job.id);
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "采集基本面";
     toast(error.message, true);
   }
 }
@@ -806,6 +831,7 @@ function renderJob(job) {
   $("#collectButton").disabled = running;
   $("#analyzeButton").disabled = running;
   $("#buildFactorButton").disabled = running;
+  $("#collectFundamentalsButton").disabled = running;
   $("#collectButton").textContent = running && isDataset ? "采集中" : "采集数据池";
   $("#analyzeButton").textContent = running && !isDataset ? "研判中" : "生成研究报告";
   if (status === "failed") {
@@ -857,6 +883,13 @@ async function pollJob(jobId) {
     if (job.status === "complete" && job.result) {
       $("#jobPanel").hidden = true;
       const result = job.result || {};
+      if (jobKind === "fundamentals") {
+        state.jobKind = null;
+        delete state.fundamentalsByRun[currentDataset()?.run_id];
+        await loadFactorData(currentDataset()?.run_id);
+        toast(`基本面已采集：${formatInteger(result.summary?.financial_rows)} 行财报`);
+        return;
+      }
       if (jobKind === "factors") {
         state.jobKind = null;
         delete state.factorsByRun[result.raw_run_id];
@@ -1320,6 +1353,7 @@ async function init() {
   });
   $("#buildExportsButton").addEventListener("click", buildResearchExports);
   $("#buildFactorButton").addEventListener("click", buildFactorPanel);
+  $("#collectFundamentalsButton").addEventListener("click", collectFundamentals);
   $("#factorSampleButton").addEventListener("click", refreshFactorSample);
   $("#factorStockQuery").addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
